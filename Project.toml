@@ -1,4 +1,4 @@
-name = "SparseInverseProblems"
+name = "SeqFISH_ADCG"
 uuid = "43951575-4589-48f4-b0ab-ec671c641013"
 authors = ["jonat <jawhite@caltech.edu>"]
 version = "0.1.0"
