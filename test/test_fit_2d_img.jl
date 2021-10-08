@@ -1,5 +1,5 @@
 # create test image
-using SparseInverseProblems
+using SeqFISH_ADCG
 using Test
 
 sigma_lb = 1.2
