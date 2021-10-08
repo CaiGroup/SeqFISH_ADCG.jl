@@ -1,5 +1,5 @@
 using LinearAlgebra
-using SparseInverseProblems
+using SeqFISH_ADCG
 
 sigma_xy_lb = 1.0
 sigma_xy_ub = 3.0
