@@ -1,5 +1,5 @@
 using LinearAlgebra
-using SparseInverseProblems
+using SeqFISH_ADCG
 #using Plots
 using Test
 using Random
