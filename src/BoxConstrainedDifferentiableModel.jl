@@ -1,5 +1,5 @@
 export BoxConstrainedDifferentiableModel
-using NLopt, SparseInverseProblems.Util
+using NLopt, SeqFISH_ADCG.Util
 # A simple forward model with box constrained parameters.
 # Assumes differentiablity of the forward operator.
 #
