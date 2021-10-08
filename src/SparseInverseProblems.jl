@@ -1,5 +1,5 @@
 
-module SparseInverseProblems
+module SeqFISH_ADCG
 using Distributed
 module Util
 include("util/ip.jl")
