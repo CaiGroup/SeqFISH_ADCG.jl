@@ -1,4 +1,4 @@
-using SparseInverseProblems
+using SeqFISH_ADCG
 
 sigma_lb = 1.5
 sigma_ub = 2.0
