@@ -1,0 +1,7 @@
+# SparseInverseProblems
+This package is a modified version of Nick Boyd's package accompanying his paper "The Alternating Descent Conditional Gradient Method for Sparse Inverse Problems." The original package is available at https://github.com/nboyd/SparseInverseProblems.jl, and the paper is available at https://doi.org/10.1137/15M1035793.
+A [copy](paper.pdf) of the paper is included in this repository.
+
+Install with `Pkg.add("https://github.com/CaiLab/SeqFISH_ADCG")`.
+
+Modified by Jonathan A White 2021
