@@ -19,7 +19,7 @@ function GaussBlur3D(
                      n_pixels :: Int64,
                      n_slices :: Int64
                      )
-  gb2d = GaussBlur2D(sigma_xy_lb, sigma_xy_ub, n_pixels, 2n_pixels)
+  gb2d = GaussBlur2D(sigma_xy_lb, sigma_xy_ub, n_pixels)
   psf_z_thresh = ceil(Int64, sigma_z_ub*3.0)
   zgrid = computeFs(Array(0.5:0.5:n_slices), n_slices, ones(2*n_slices).*sigma_z_lb, psf_z_thresh)
   GaussBlur3D(sigma_z_lb, sigma_z_ub, n_pixels, n_slices, psf_z_thresh, zgrid, gb2d)
@@ -59,11 +59,12 @@ function getStartingPoint(model :: GaussBlur3D, r_vec :: Vector{Float64})
   return thetas
 end
 
-function phi(s :: GaussBlur3D, parameters :: Matrix{Float64}, weights :: Vector{Float64})
+function phi(s :: GaussBlur3D, parameters :: Matrix{Float64})#, weights :: Vector{Float64})
   canvas = zeros(s.n_pixels, s.n_pixels, s.n_slices)
-  for (i, w) in enumerate(weights)
-    dot_2d_params = reshape(parameters[[1,2,4], i], 3,1)
-    phi2d_i = phi(s.gb2d, dot_2d_params,[w])
+  for i in 1:size(parameters)[2] #(i, w) in enumerate(weights)
+    #dot_2d_params = reshape(parameters[[1,2,4], i], 3,1)
+    dot_2d_params = reshape(parameters[[1,2,4, 6], i], 4,1)
+    phi2d_i = phi(s.gb2d, dot_2d_params)
     z_profile = computeFs([parameters[3,i]], s.n_slices, [parameters[5,i]], s.psf_z_thresh)
     phi2d_i = reshape(phi2d_i, s.n_pixels, s.n_pixels, 1)
     z_profile = reshape(z_profile, 1, 1, s.n_slices)
@@ -74,12 +75,13 @@ function phi(s :: GaussBlur3D, parameters :: Matrix{Float64}, weights :: Vector{
 end
 
 function parameterBounds(m :: GaussBlur3D)
-  lbs = [0.0,0.0,0.0,m.gb2d.sigma_lb,m.sigma_z_lb]
-  ubs = [Float64(m.n_pixels), Float64(m.n_pixels), Float64(m.n_slices),m.gb2d.sigma_ub,m.sigma_z_ub]
+  lbs = [0.0,0.0,0.0,m.gb2d.sigma_lb,m.sigma_z_lb, 0]
+  ubs = [Float64(m.n_pixels), Float64(m.n_pixels), Float64(m.n_slices),m.gb2d.sigma_ub,m.sigma_z_ub, Inf]
   (lbs, ubs)
 end
 
-function computeGradient(model :: GaussBlur3D, weights :: Vector{Float64}, thetas :: Matrix{Float64}, r :: Vector{Float64})
+#function computeGradient(model :: GaussBlur3D, weights :: Vector{Float64}, thetas :: Matrix{Float64}, r :: Vector{Float64})
+function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: Vector{Float64})
 
   # v is the gradient of loss (vi = resid_i/norm(residuals))
   r = reshape(r, model.n_pixels, model.n_pixels, model.n_slices)
@@ -105,17 +107,18 @@ function computeGradient(model :: GaussBlur3D, weights :: Vector{Float64}, theta
 
 
 
-    k_sums = zeros(5)
+    k_sums = zeros(size(thetas)[1])
     for k = 1:model.n_slices
       fz = exp(-(k-point[3])^2/(2 * point[5]^2))
 
-      ∂loss∂x₁ₗ = - weights[l] * fz *(f_x2' * r[:,:,k] * fpx1)/(point[4]^2)
-      ∂loss∂x₂ₗ = - weights[l] * fz * (fpx2' * r[:,:,k] * f_x1)/(point[4]^2)
-      ∂loss∂σₓₗ = - weights[l] * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(point[4]^3)
-      ∂loss∂x₃ₗ = - weights[l] * (k - point[3]) * fz * (f_x2' * r[:,:,k] * f_x1)/(point[5]^2)
-      ∂loss∂σzₗ = - weights[l] * (k - point[3])^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(point[3]^3)
+      ∂loss∂x₁ₗ = - point[6] * fz *(f_x2' * r[:,:,k] * fpx1)/(point[4]^2)
+      ∂loss∂x₂ₗ = - point[6] * fz * (fpx2' * r[:,:,k] * f_x1)/(point[4]^2)
+      ∂loss∂σₓₗ = - point[6] * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(point[4]^3)
+      ∂loss∂x₃ₗ = - point[6] * (k - point[3]) * fz * (f_x2' * r[:,:,k] * f_x1)/(point[5]^2)
+      ∂loss∂σzₗ = - point[6] * (k - point[3])^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(point[3]^3)
+      ∂loss∂wₖ = - fz* (f_x2' * r[:,:,k] * f_x1)
 
-      k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ]
+      k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₖ]
     end
     #gradient[:, l] = [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂σₗ]
     gradient[:, l] = k_sums ./ model.n_slices
@@ -189,12 +192,16 @@ function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   return reshape(optx, 2, nPoints), optf
 end
 
-"""
-function localDescent(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64}, bounds = parameterBounds(s))
+
+function localDescent(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, y :: Vector{Float64}, bounds = parameterBounds(s))
   #lb,ub = parameterBounds(s)
   lb, ub = bounds
-  nPoints = size(thetas,2)
-  p = size(thetas,1)
+  #nPoints = size(thetas,2)
+  nPoints = size(thetas,1)
+
+  #p = size(thetas,1)
+  p = size(thetas,2)
+  w = thetas[:,6]
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
   f_and_g!(x,g) = localDescent_f_and_g!(x,g,su)
   opt = Opt(NLopt.LD_MMA, length(thetas))
@@ -204,15 +211,13 @@ function localDescent(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}
   #upper_bounds!(opt, vec(repmat(ub,1,nPoints)))
   lb_vec = vec(repeat(lb,1,nPoints))
   ub_vec = vec(repeat(ub,1,nPoints))
-  #println("LD lb_vec: ", lb_vec)
-  #println("LD ub_vec: ", ub_vec)
   lower_bounds!(opt, lb_vec)
   upper_bounds!(opt, ub_vec)
   (optf,optx,ret) = optimize(opt, vec(thetas))
   #println("ret: ", ret)
   return reshape(optx,p,nPoints), optf
 end
-"""
+
 
 function lmo(model :: GaussBlur3D, r :: Vector{Float64}) #v :: Vector{Float64})
   lb_0,ub_0 = parameterBounds(model)
@@ -247,5 +252,8 @@ function lmo(model :: GaussBlur3D, r :: Vector{Float64}) #v :: Vector{Float64})
   #println(optx)
   #println("optx: ", optx)
   #println("ret: ", ret)
+  if ret == :FORCED_STOP
+    error("Forced Stop in Coordinate Optimization")
+  end
   return (optx, optf)
 end

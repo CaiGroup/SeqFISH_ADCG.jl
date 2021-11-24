@@ -194,15 +194,18 @@ function remove_duplicates3d(points :: DataFrame,
                    points[!, "y"],
                    points[!,"z"],
                    points[!, "s_xy"],
-                   points[!, "s_z"])'
-    ws = points[!, "w"]
-    ps, ws = remove_duplicates(ps, ws, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+                   points[!, "s_z"],
+                   points[!, "w"])'
+    #ws = points[!, "w"]
+    #ps, ws = remove_duplicates(ps, ws, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+    ps = remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+
     points_df = DataFrame()
     points_df[!, "x"] = ps[1,:]
     points_df[!, "y"] = ps[2,:]
     points_df[!, "z"] = ps[3,:]
     points_df[!, "s_xy"] = ps[4,:]
     points_df[!, "s_z"] = ps[5,:]
-    points_df[!, "w"] = ws
+    points_df[!, "w"] = ps[6,:]
     return points_df
 end

@@ -1,6 +1,7 @@
+export GaussBlur, GaussBlur2D
+
 using SpecialFunctions
 using LinearAlgebra
-export GaussBlur2D
 #using Lasso
 using GLM
 
@@ -16,7 +17,7 @@ struct GaussBlur2D <: GaussBlur
   grid_sigma
 end
 
-function GaussBlur2D(sigma_lb, sigma_ub, np)
+function GaussBlur2D(sigma_lb :: Real, sigma_ub :: Real, np :: Int64)
   psf_thresh = ceil(Int64, sigma_ub*3.0)
   #grid_f = computeFs(Array(0.5:0.5:np),np, ones(ng).*sigma_mid, psf_thresh)
   #

@@ -27,12 +27,13 @@ parameterBounds(model :: BoxConstrainedDifferentiableModel) =
   error("parameterBounds not implemented for model $(typeof(model)).")
 
 #default implementation of phi in terms of psi --- you should probably overwride this!
+"""
 phi(model :: BoxConstrainedDifferentiableModel, parameters :: Matrix{Float64}, weights :: Vector{Float64}) =
     sum([weights[i]*psi(model, vec(parameters[:,i])) for i = 1:size(parameters,2)])
 
 phi(model :: BoxConstrainedDifferentiableModel, parameters :: Vector{Float64}, weights :: Vector{Float64}) =
     sum([weights[i]*psi(model, vec(parameters[:,i])) for i = 1:size(parameters,2)])
-
+"""
 # Computes $\nabla_{\theta_1,\ldots,\theta_k} \sum_i \langle w_i \psi(\theta_i), v \rangle.$
 # Returns a matrix with the same shape as thetas (which is p by k).
 # You should probably overwride this!
