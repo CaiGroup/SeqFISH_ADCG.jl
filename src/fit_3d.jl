@@ -31,7 +31,7 @@ function fit_stack(inputs)
     #tau = sum_target
     tau = sum_target/15 + 1.0 #final_loss_improvement + 1.0
     #println("tau: ", tau)
-    function callback(old_thetas,thetas, weights,output,old_obj_val)
+    function callback(old_thetas,thetas,output,old_obj_val)
       #evalute current OV
       new_obj_val,t = loss(LSLoss(), output - target)
       #println("new_obj_val: ", new_obj_val)

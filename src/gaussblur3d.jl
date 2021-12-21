@@ -53,9 +53,30 @@ function getStartingPoint(model :: GaussBlur3D, r_vec :: Vector{Float64})
   println("sse: ", sse)
   sigma_start = model.grid_sigma[argmin(sse)]
   """
+  opt_w = 0
+  opt_s_xy = model.gb2d.sigma_lb
+  opt_s_z = model.sigma_z_lb
+  opt_obj = Inf
+  for s_xy in range(model.gb2d.sigma_lb, model.gb2d.sigma_ub, length=20), s_z in range(model.sigma_z_lb, model.sigma_z_ub, length=10)
+    coords_sigma = reshape([thetas[1] thetas[2] thetas[3] s_xy s_z 1.0],6,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    l_fit = lm(A, r_vec)
+    obj_v = sum(residuals(l_fit).^2)
+    if obj_v < opt_obj
+      opt_s_xy = s_xy
+      opt_s_z = s_z
+      opt_w = coef(l_fit)[1]
+      opt_obj = obj_v
+    end
+  end
+  if opt_w < 0
+    opt_w = 0
+  end
   #push!(thetas, sigma_start)
-  push!(thetas, model.gb2d.sigma_lb)
-  push!(thetas, model.sigma_z_lb)
+  push!(thetas, opt_s_xy)
+  push!(thetas, opt_s_z)
+  push!(thetas, opt_w)
   return thetas
 end
 
@@ -82,7 +103,6 @@ end
 
 #function computeGradient(model :: GaussBlur3D, weights :: Vector{Float64}, thetas :: Matrix{Float64}, r :: Vector{Float64})
 function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: Vector{Float64})
-
   # v is the gradient of loss (vi = resid_i/norm(residuals))
   r = reshape(r, model.n_pixels, model.n_pixels, model.n_slices)
 
@@ -101,7 +121,6 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
   #compute gradient
   for l = 1:size(thetas,2)
     point = vec(thetas[:,l])
-    #println("computeFG! ...")
     computeFG!(model.gb2d, point[1], point[4], f_x1, fpx1, fpx1s)
     computeFG!(model.gb2d, point[2], point[4], f_x2, fpx2, fpx2s)
 
@@ -149,8 +168,11 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
   function f_and_g!(x,g)
       ps = reshape(x, 3, Int64(length(x)/3))
-      ps = vcat(ps, thetas[4:5,:])
-      localDescent_f_and_g!(vec(ps),g,su)
+      output = phi(su.s,ps)
+      residual = su.y .- output
+      l,v_star = loss(s.lossFn,residual)
+      g[:] = computeGradient(su.s, ps, residual)[1:3]
+      println("l: ", l)
   end
   #println("nPoints: ", 2*nPoints)
   opt = Opt(NLopt.LD_MMA, 3*nPoints)#length(thetas))
@@ -165,8 +187,8 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
 end
 
 function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})
-  lb = [s.gb2d.sigma_lb, s.sigma_z_lb]
-  ub = [s.gb2d.sigma_ub, s.sigma_z_ub]
+  lb = [s.gb2d.sigma_lb, s.sigma_z_lb, 0]
+  ub = [s.gb2d.sigma_ub, s.sigma_z_ub, Inf]
 
   nPoints = size(thetas,2)
   p = size(thetas,1)
@@ -174,12 +196,30 @@ function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   #f_and_g!(x,g) = localDescent_f_and_g!(x,g,su)
 
   #coordinates are fixed, sigma is input parameter to be optimized
-  function f_and_g!(sigma,g)
-      sigma = reshape(sigma, 2, nPoints)
-      ps = vcat(thetas[1:3,:], sigma)
-      localDescent_f_and_g!(vec(ps),g,su)
+  function f_and_g!(sigmas_weights,g)
+      println("f_and_g!")
+      sigmas_weights = reshape(sigmas_weights, 3, nPoints)
+      println("reshaped")
+      ps = vcat(thetas[1:3,:], sigmas_weights)
+      println("vcat")
+      #localDescent_f_and_g!(vec(ps),g,su)
+      #ps = reshape(x, 3, Int64(length(x)/3))
+      println(typeof(su.s))
+      println(typeof(ps))
+      output = phi(su.s,ps)
+      println("phi")
+      residual = su.y .- output
+      println("resid")
+      l,v_star = loss(su.lossFn,residual)
+      println("compute grad...")
+      sw_g = computeGradient(su.s, ps, residual)[4:6]
+      println(sw_g)
+      println("g: ", g)
+      g[4:6] = sw_g #computeGradient(su.s, ps, residual)[4:6]
+      println("g")
+      return l
   end
-  opt = Opt(NLopt.LD_MMA, 2*nPoints)#length(thetas))
+  opt = Opt(NLopt.LD_MMA, 3*nPoints)#length(thetas))
   initializeOptimizer!(s, opt)
   min_objective!(opt, f_and_g!)
   lower_bounds!(opt, vec(repeat(lb, 1, nPoints)))
@@ -188,20 +228,23 @@ function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   #ub_vec = fill(ub, nPoints)
   #lower_bounds!(opt, s.sigma_z_lb)#vec(repeat(lb,1,nPoints)))
   #upper_bounds!(opt, s.sigma_z_ub)#svec(repeat(ub,1,nPoints)))
-  (optf,optx,ret) = optimize(opt, vec(thetas[4:5, :]))
-  return reshape(optx, 2, nPoints), optf
+  (optf,optx,ret) = optimize(opt, vec(thetas[4:6, :]))
+  if ret == :FORCED_STOP
+    error("Forced Stop in sigma weight Optimization")
+  end
+  return reshape(optx, 3, nPoints), optf
 end
 
 
 function localDescent(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, y :: Vector{Float64}, bounds = parameterBounds(s))
   #lb,ub = parameterBounds(s)
   lb, ub = bounds
-  #nPoints = size(thetas,2)
-  nPoints = size(thetas,1)
+  nPoints = size(thetas,2)
+  #nPoints = size(thetas,1)
 
-  #p = size(thetas,1)
-  p = size(thetas,2)
-  w = thetas[:,6]
+  p = size(thetas,1)
+  #p = size(thetas,2)
+  w = thetas[:,end]
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
   f_and_g!(x,g) = localDescent_f_and_g!(x,g,su)
   opt = Opt(NLopt.LD_MMA, length(thetas))
@@ -215,7 +258,7 @@ function localDescent(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}
   upper_bounds!(opt, ub_vec)
   (optf,optx,ret) = optimize(opt, vec(thetas))
   #println("ret: ", ret)
-  return reshape(optx,p,nPoints), optf
+  return (reshape(optx,p,nPoints), optf, ret)
 end
 
 
@@ -230,23 +273,28 @@ function lmo(model :: GaussBlur3D, r :: Vector{Float64}) #v :: Vector{Float64})
   ub2 = minimum([ub_0[2], initial_x[2] + 0.5]) #0.25])
   ub3 = minimum([ub_0[3], initial_x[3] + 0.5])
 
-  lb = [lb1, lb2, lb3, lb_0[4], lb_0[5]]
+  lb = [lb1, lb2, lb3, lb_0[4], lb_0[5], lb_0[6]]
   #ub = [ub1, ub2, ub[3]]
-  ub = [ub1, ub2, ub3, lb_0[4], lb_0[5]]
+  ub = [ub1, ub2, ub3, ub_0[4], ub_0[5], ub_0[6]]
   #println("Stating Point: ", initial_x)
   p = length(lb)
   #println("lb: ", lb)
   #println("ub: ", ub)
-  optx, optf = localDescent(model, LSLoss(), reshape(initial_x, 5, 1), [1.0], r, [lb, ub])
+  optx, optf, ret = localDescent(model, LSLoss(), reshape(initial_x, 6, 1), r, [lb, ub])
   #optx_coords, optf = localDescent_coord(model, LSLoss(), reshape(initial_x, 5, 1), [1.0], r)
   #optx, optf = localDescent(model, LSLoss(), reshape(initial_x, 3, 1), [1.0], r, (lb, ub))
+
+  if ret == :FORCED_STOP
+    error("Forced Stop in Coordinate Optimization")
+  end
 
   #x_centered = zeros(5,1)
   #x_centered[1:3,:] .= optx_coords
   #x_centered[4:5,:] .= initial_x[4:5]
-  lb = [optx[1], optx[2], optx[3], lb_0[4], lb_0[5]]
-  ub = [optx[1], optx[2], optx[3], ub_0[4], ub_0[5]]
-  optx, optf = localDescent(model, LSLoss(), optx, [1.0], r, [lb, ub])
+  lb = [optx[1], optx[2], optx[3], lb_0[4], lb_0[5], lb_0[6]]
+  ub = [optx[1], optx[2], optx[3], ub_0[4], ub_0[5], ub_0[6]]
+
+  optx, optf, ret = localDescent(model, LSLoss(), optx, r, [lb, ub])
   #optx_sigma, optf = localDescent_sigma(model, LSLoss(), x_centered, [1.0], r)
   #optx, optf = localDescent(model, LSLoss(), optx, [1.0], r, (lb, ub))
   #println(optx)

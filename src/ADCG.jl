@@ -48,6 +48,7 @@ end
 
 function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     thetas :: Matrix{Float64}, y :: Vector{Float64}, tau :: Float64, max_iters, min_weight)
+  w_ind = size(thetas)[1]
   for cd_iter = 1:max_iters
     old_thetas = thetas
 
@@ -56,18 +57,24 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     #thetas, weights = remove_duplicates(thetas, weights, y, sim.sigma_lb, sim.sigma_ub, tau, 0.0, sim.sigma_lb)
 
 
-    new_sigmas, optf = localDescent_sigma(sim, lossFn, thetas, thetas[4,:], y)
+    new_sigmas, optf = localDescent_sigma(sim, lossFn, thetas, thetas[w_ind,:], y)
 
-    thetas[3:4,:] = new_sigmas
+    if typeof(sim) == GaussBlur2D
+      thetas[3:4,:] = new_sigmas
+    elseif typeof(sim) == GaussBlur3D
+      thetas[4:6,:] = new_sigmas
+    else
+      error("Unknown Sourse funtion type")
+    end
 
     #remove points with low weight
-    if any(thetas[4,:].<= min_weight)
-      println("Removing ",sum(thetas[4,:] .<= min_weight), " dim points.")
-      thetas = thetas[:,thetas[4,:] .> min_weight]
+    if any(thetas[w_ind,:].<= min_weight)
+      #println("Removing ",sum(thetas[4,:] .<= min_weight), " dim points.")
+      thetas = thetas[:,thetas[w_ind,:] .> min_weight]
     end
     #local minimization over the support
-    new_coords, optf = localDescent_coord(sim, lossFn, thetas, thetas[4,:], y)
-    new_sigmas, optf = localDescent_sigma(sim, lossFn, thetas, thetas[4,:], y)
+    new_coords, optf = localDescent_coord(sim, lossFn, thetas, thetas[w_ind,:], y)
+    new_sigmas, optf = localDescent_sigma(sim, lossFn, thetas, thetas[w_ind,:], y)
     new_thetas = vcat(new_coords, new_sigmas)
     #break if termination condition is met
     #if length(thetas) == 0 || (length(thetas) == length(new_thetas) && maximum(abs.(vec(thetas)-vec(new_thetas))) <= 1E-7)
@@ -82,9 +89,9 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
   end
 
   #final prune
-  if any(thetas[4,:].<= min_weight)
-    println("Removing ",sum(thetas[4,:] .<= min_weight), " dim points.")
-    thetas = thetas[:,thetas[4,:] .> min_weight]
+  if any(thetas[w_ind,:].<= min_weight)
+    #println("Removing ",sum(thetas[4,:] .<= min_weight), " dim points.")
+    thetas = thetas[:,thetas[w_ind,:] .> min_weight]
   end
 
   return thetas

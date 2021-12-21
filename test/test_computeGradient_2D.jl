@@ -29,7 +29,7 @@ function trial_gradient(test_img, _trial_point, _trial_weight)
     trial_point[1:3] = _trial_point
     trial_point[4] = _trial_weight
     residuals = resids(test_img, trial_point)
-    gradient = SparseInverseProblems.computeGradient(gblur, trial_point, residuals)
+    gradient = SeqFISH_ADCG.computeGradient(gblur, trial_point, residuals)
     return gradient
 end
 
