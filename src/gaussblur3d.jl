@@ -197,26 +197,15 @@ function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
 
   #coordinates are fixed, sigma is input parameter to be optimized
   function f_and_g!(sigmas_weights,g)
-      println("f_and_g!")
       sigmas_weights = reshape(sigmas_weights, 3, nPoints)
-      println("reshaped")
-      ps = vcat(thetas[1:3,:], sigmas_weights)
-      println("vcat")
+      ps = vcat(thetas[4:6,:], sigmas_weights)
       #localDescent_f_and_g!(vec(ps),g,su)
       #ps = reshape(x, 3, Int64(length(x)/3))
-      println(typeof(su.s))
-      println(typeof(ps))
       output = phi(su.s,ps)
-      println("phi")
       residual = su.y .- output
-      println("resid")
       l,v_star = loss(su.lossFn,residual)
-      println("compute grad...")
       sw_g = computeGradient(su.s, ps, residual)[4:6]
-      println(sw_g)
-      println("g: ", g)
-      g[4:6] = sw_g #computeGradient(su.s, ps, residual)[4:6]
-      println("g")
+      g[:] = sw_g #computeGradient(su.s, ps, residual)[4:6]
       return l
   end
   opt = Opt(NLopt.LD_MMA, 3*nPoints)#length(thetas))

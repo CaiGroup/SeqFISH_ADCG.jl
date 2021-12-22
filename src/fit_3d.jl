@@ -43,8 +43,8 @@ function fit_stack(inputs)
       end
       return false
     end
-    (points,weights) = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
-    return (points, weights)
+    points = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
+    return points
 end
 
 

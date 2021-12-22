@@ -36,5 +36,4 @@ max_cd_iters = 100
 inputs = (test_stack, sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters)
 results = SeqFISH_ADCG.fit_stack(inputs)
 
-println(results[1])
-println(results[2])
+println(results)
