@@ -8,7 +8,21 @@ using DataFrames
 using Statistics
 using NearestNeighbors
 
+"""
+    fit_tile(inputs)
 
+Arguments:
+    - `inputs` : A tuple of inputs with entries:
+        - `tile` : An image tile to perform ADCG on.
+        - `sigma_lb` : the lowest allowed value of the width parameter of dots.
+        - `sigma_ub` : the highest allowed value of the width parameter of dots.
+        - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
+        - `tau` :
+        - `final_loss_improvement` : Terminate ADCG when the objective improves by less than this value in one iteration
+        - `min_weight` : The minimum allowed weight of a PSF in the image model
+        - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
+        - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
+"""
 function fit_tile(inputs)
     #println("fitting tile ... ")
     tile, sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters = inputs
