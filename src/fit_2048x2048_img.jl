@@ -12,16 +12,16 @@ using NearestNeighbors
     fit_tile(inputs)
 
 Arguments:
-    - `inputs` : A tuple of inputs with entries:
-        - `tile` : An image tile to perform ADCG on.
-        - `sigma_lb` : the lowest allowed value of the width parameter of dots.
-        - `sigma_ub` : the highest allowed value of the width parameter of dots.
-        - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
-        - `tau` :
-        - `final_loss_improvement` : Terminate ADCG when the objective improves by less than this value in one iteration
-        - `min_weight` : The minimum allowed weight of a PSF in the image model
-        - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
-        - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
+- `inputs` : A tuple of inputs with entries:
+    - `tile` : An image tile to perform ADCG on.
+    - `sigma_lb` : the lowest allowed value of the width parameter of dots.
+    - `sigma_ub` : the highest allowed value of the width parameter of dots.
+    - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
+    - `tau` :
+    - `final_loss_improvement` : Terminate ADCG when the objective improves by less than this value in one iteration
+    - `min_weight` : The minimum allowed weight of a PSF in the image model
+    - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
+    - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
 """
 function fit_tile(inputs)
     #println("fitting tile ... ")
@@ -83,7 +83,18 @@ function trim_tile_fit!(tile_fit, width)
     return ps_trim #[ps_trim, ws_trim]
 end
 
-
+"""
+    fit_2048x2048_img_tiles(img,
+                            sigma_lb :: Float64,
+                            sigma_ub :: Float64,
+                            tau :: Float64,
+                            final_loss_improvement :: Float64,
+                            min_weight :: Float64,
+                            max_iters :: Int64,
+                            max_cd_iters :: Int64,
+                            noise_mean :: Float64
+                            )
+"""
 function fit_2048x2048_img_tiles(img,
                            sigma_lb :: Float64,
                            sigma_ub :: Float64,
@@ -103,6 +114,22 @@ function fit_2048x2048_img_tiles(img,
 
 end
 
+"""
+    fit_img_tiles(
+                    img,
+                    main_tile_width :: Int64,
+                    tile_overlap :: Int64,
+                    sigma_lb :: Float64,
+                    sigma_ub :: Float64,
+                    tau :: Float64,
+                    final_loss_improvement :: Float64,
+                    min_weight :: Float64,
+                    max_iters :: Int64,
+                    max_cd_iters :: Int64,
+                    noise_mean :: Float64
+                )
+
+"""
 function fit_img_tiles(img,
                        main_tile_width :: Int64,
                        tile_overlap :: Int64,
@@ -173,6 +200,17 @@ function fit_img_tiles(img,
     return points_df
 end
 
+"""
+    remove_duplicates(points :: DataFrame,
+                    img,
+                    sigma_lb :: Float64,
+                    sigma_ub :: Float64,
+                    tau :: Float64,
+                    noise_mean :: Float64,
+                    min_allowed_separation :: Float64,
+                    dims :: Int64 = 2
+                    )
+"""
 function remove_duplicates(points :: DataFrame,
                            img,
                            sigma_lb :: Float64,
