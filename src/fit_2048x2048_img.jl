@@ -210,6 +210,9 @@ end
                     min_allowed_separation :: Float64,
                     dims :: Int64 = 2
                     )
+
+    Removes duplicates within min_allowed_separtion of each other from an image.
+    This is necessary when fit by a tiled ADCG where the tiles overlap.
 """
 function remove_duplicates(points :: DataFrame,
                            img,
