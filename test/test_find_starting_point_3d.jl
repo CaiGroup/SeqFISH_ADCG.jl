@@ -20,4 +20,6 @@ test_img_stack = phi(gblur, p_true)#, w_true)
 
 result = SeqFISH_ADCG.getStartingPoint(gblur, reshape(test_img_stack, length(test_img_stack)))
 
-@test all(result .== [14.5, 16.5, 5.5, 1.2, 2.0])
+#@test all(result .== [14.5, 16.5, 5.5, 1.2, 2.0])
+@test all(abs.(result .- [14.5, 16.5, 5.5, 2.0, 2.0, 1.0]) .< 0.03)
+
