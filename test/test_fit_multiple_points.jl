@@ -48,11 +48,6 @@ function test_fit_mult_ps(ps :: Matrix)
 
     sorted_results = sortslices(points, dims=2)
     sorted_ps = sortslices(ps, dims=2)
-    println()
-    println(sorted_results)
-    println()
-    println(sorted_ps)
-    println()
 
     @test all(isapprox.(sorted_ps, sorted_results, atol = 0.05))
 end
