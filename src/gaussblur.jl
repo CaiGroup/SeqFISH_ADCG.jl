@@ -2,7 +2,6 @@ export GaussBlur, GaussBlur2D
 
 using SpecialFunctions
 using LinearAlgebra
-#using Lasso
 using GLM
 
 abstract type GaussBlur <: BoxConstrainedDifferentiableModel end
@@ -11,7 +10,7 @@ struct GaussBlur2D <: GaussBlur
   sigma_lb :: Float64
   sigma_ub :: Float64
   n_pixels :: Int64
-  ng :: Int64 #this is small now
+  ng :: Int64
   psf_thresh :: Int64
   grid_f
   grid_sigma
@@ -19,12 +18,9 @@ end
 
 function GaussBlur2D(sigma_lb :: Real, sigma_ub :: Real, np :: Int64)
   psf_thresh = ceil(Int64, sigma_ub*3.0)
-  #grid_f = computeFs(Array(0.5:0.5:np),np, ones(ng).*sigma_mid, psf_thresh)
-  #
   grid_f = computeFs(Array(0.5:0.5:np),np, ones(2np).*sigma_lb, psf_thresh)
   ng_sigma = ceil(Int64, (sigma_ub - sigma_lb)/0.1) + 1
   grid_sigma = Array(range(sigma_lb, sigma_ub, length = ng_sigma))
-  #GaussBlur2D(sigma_lb, sigma_ub, np, ng, psf_thresh, grid_f, grid_sigma)
   GaussBlur2D(sigma_lb, sigma_ub, np, 2np, psf_thresh, grid_f, grid_sigma)
 end
 
@@ -32,7 +28,7 @@ function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
   r = reshape(r_vec, model.n_pixels, model.n_pixels)
   ng = model.ng
   grid_objective_values = model.grid_f'*r*model.grid_f
-  best_point_idx = argmax(grid_objective_values) #argmin(grid_objective_values)
+  best_point_idx = argmax(grid_objective_values)
   thetas =  [best_point_idx[2];best_point_idx[1]].*(model.n_pixels/model.ng)
 
   #grid sigma, fit weight with least squares, choose best combo
@@ -56,7 +52,6 @@ function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
   end
 
   push!(thetas, opt_s)
-  #push!(thetas, 1.0)
   push!(thetas, opt_w)
   return thetas
 end
@@ -245,7 +240,7 @@ function localDescent_coord(s :: GaussBlur2D, lossFn :: Loss, thetas ::Matrix{Fl
   return reshape(optx,2,nPoints), optf
 end
 
-function localDescent_sigma(s :: GaussBlur2D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})#, bounds = parameterBounds(s))
+function localDescent_sigma(s :: GaussBlur2D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})
   lb,ub = parameterBounds(s)
   s_lb = lb[3]
   s_ub = ub[3]
