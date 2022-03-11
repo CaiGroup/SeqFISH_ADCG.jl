@@ -20,7 +20,7 @@ p_true = Matrix([16.0 16.0 7.0 1.4 1.1 1.0;]')
 
 #p_trial = [15.0 15.0 6.0 1.0 1.0]
 #w_trial = [1.0]
-p_trial = [15.0 15.0 6.0 1.0 1.0 1.0]
+p_trial = Matrix([15.0 15.0 6.0 1.0 1.0 1.0]')
 
 gblur = GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, width, n_slices)
 test_img_stack = phi(gblur, p_true)#, w_true)
