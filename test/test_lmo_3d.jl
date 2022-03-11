@@ -8,15 +8,19 @@ sigma_z_ub = 2.0
 width = 32
 n_slices = 15
 
-p_true = Matrix([16.3 16.3 7.6 1.4 1.1;]')
-w_true = [1.0]
+p_true = Matrix([16.3 16.3 7.6 1.4 1.1 1.0;]')
+#w_true = [1.0]
 
-gblur = GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, width, 2width, n_slices)
+gblur = GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, width, n_slices)
 
-test_img = phi(gblur, p_true, w_true)
+#test_img = phi(gblur, p_true, w_true)
+test_img = phi(gblur, p_true)
+
 residuals = test_img
 v = residuals./norm(residuals)
 
 params, objv = lmo(gblur, residuals)
 
 println(params)
+
+@test all(isapprox.(params, p_true, atol=0.001))

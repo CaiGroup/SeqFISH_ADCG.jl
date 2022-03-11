@@ -117,14 +117,17 @@ function computeGradient(model :: GaussBlur2D, thetas :: Matrix{Float64}, r :: V
   #compute gradient
   for k = 1:size(thetas,2)
     point = vec(thetas[:,k])
-    computeFG!(model, point[1], point[3], f_x1, fpx1, fpx1s)
-    computeFG!(model, point[2], point[3], f_x2, fpx2, fpx2s)
-    #∂loss∂x₁ₖ = - 2 * weights[k] * (f_x2' * R * fpx1)/(point[3]^2)
-    #∂loss∂x₂ₖ = - 2 * weights[k] * (fpx2' * R * f_x1)/(point[3]^2)
-    #∂loss∂σₖ = - 2 * weights[k] * ( f_x2' * R * fpx1s + fpx2s' * R * f_x1)/(point[3]^3)
-    ∂loss∂x₁ₖ = - 2 * point[4] * (f_x2' * R * fpx1)/(point[3]^2)
-    ∂loss∂x₂ₖ = - 2 * point[4] * (fpx2' * R * f_x1)/(point[3]^2)
-    ∂loss∂σₖ = - 2 * point[4] * ( f_x2' * R * fpx1s + fpx2s' * R * f_x1)/(point[3]^3)
+    x₁ₖ, x₂ₖ, σₖ, wₖ = point
+    #computeFG!(model, point[1], point[3], f_x1, fpx1, fpx1s)
+    #computeFG!(model, point[2], point[3], f_x2, fpx2, fpx2s)
+    #∂loss∂x₁ₖ = - 2 * point[4] * (f_x2' * R * fpx1)/(point[3]^2)
+    #∂loss∂x₂ₖ = - 2 * point[4] * (fpx2' * R * f_x1)/(point[3]^2)
+    #∂loss∂σₖ = - 2 * point[4] * ( f_x2' * R * fpx1s + fpx2s' * R * f_x1)/(point[3]^3)
+    computeFG!(model, x₁ₖ, σₖ, f_x1, fpx1, fpx1s)
+    computeFG!(model, x₂ₖ, σₖ, f_x2, fpx2, fpx2s)
+    ∂loss∂x₁ₖ = - 2 * wₖ * (f_x2' * R * fpx1)/(σₖ^2)
+    ∂loss∂x₂ₖ = - 2 * wₖ * (fpx2' * R * f_x1)/(σₖ^2)
+    ∂loss∂σₖ = - 2 * wₖ * ( f_x2' * R * fpx1s + fpx2s' * R * f_x1)/(σₖ^3)
     ∂loss∂wₖ = - 2 * (f_x2' * R * f_x1)
     gradient[:, k] = [∂loss∂x₁ₖ, ∂loss∂x₂ₖ, ∂loss∂σₖ, ∂loss∂wₖ]
   end

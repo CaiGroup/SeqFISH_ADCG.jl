@@ -1,5 +1,6 @@
 using LinearAlgebra
 using SeqFISH_ADCG
+using Test
 
 sigma_xy_lb = 1.0
 sigma_xy_ub = 3.0
@@ -60,25 +61,33 @@ end
 
 Δ = 0.00001
 
-println("gradient: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0], 1.0))
+#println("gradient: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
 #println("empGrad: ", empGrad(test_img, [16.0, 16.0, 1.0], 1.0, Δ))
-println()
+#println()
 
-println("grad: ", trial_gradient(test_img, [14.0, 18.0, 7.0, 1.4, 1.1, 1.0], 1.0))
+@test all(trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]) .== 0)
+
+println("grad: ", trial_gradient(test_img, [14.0, 18.0, 7.0, 1.4, 1.1, 1.0]))
+t1 = trial_gradient(test_img, [14.0, 18.0, 7.0, 1.4, 1.1, 1.0])
+@test t1[1] < -0.01
+@test t1[2] > 0.01
+@test isapprox(t1[3],0,atol=0.01) 
 #println("empGrad: ", empGrad(test_img, [14.0, 18.0, 1.0], 1.0, Δ))
+
+
 println()
-println("grad: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 4.0, 1.0], 1.0))
+println("grad: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 4.0, 1.0]))
 #println("empGrad: ", empGrad(test_img, [16.0, 16.0, 4.0], 1.0, Δ))
 
 println()
-println("grad: ", trial_gradient(test_img, [16.0, 15.0, 7.0, 1.4, 1.1, 1.0], 1.0))
+println("grad: ", trial_gradient(test_img, [16.0, 15.0, 7.0, 1.4, 1.1, 1.0]))
 #println("empGrad: ", empGrad(test_img, [16.0, 15.0, 2.0], 1.0, Δ))
 
 println()
-println("grad: ", trial_gradient(test_img, [15.0, 16.0, 7.0, 1.4, 1.1, 1.0], 1.0))
+println("grad: ", trial_gradient(test_img, [15.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
 #println("empGrad: ", empGrad(test_img, [15.0, 16.0, 2.0], 1.0, Δ))
 
 
 println()
-println("grad: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0], 1.0))
+println("grad: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
 #println("empGrad: ", empGrad(test_img, [16.0, 16.0, 2.0], 1.0, Δ))
