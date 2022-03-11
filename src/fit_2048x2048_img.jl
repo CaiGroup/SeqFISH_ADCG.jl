@@ -94,6 +94,19 @@ end
                             max_cd_iters :: Int64,
                             noise_mean :: Float64
                             )
+
+Arguments:
+- `img` : a 2048x2048 image to fit 
+- `sigma_lb` : the lowest allowed σ of a PSF
+- `sigma_ub` : the highest allowed σ of a PSF
+- `tau` : not used in current version
+- `final_loss_improvement` : ADCG terminates when the improvement in the loss function in subsequent iterations is less than this
+- `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
+- `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
+- `noise_mean` : the noise mean is subtracted from the image before fitting
+
+Fits gaussian point spread functions in a 2048x2048 pixel image with ADCG by splitting it into overlapping 70x70 pixel tiles. 
+
 """
 function fit_2048x2048_img_tiles(img,
                            sigma_lb :: Float64,
@@ -115,19 +128,32 @@ function fit_2048x2048_img_tiles(img,
 end
 
 """
-    fit_img_tiles(
-                    img,
-                    main_tile_width :: Int64,
-                    tile_overlap :: Int64,
-                    sigma_lb :: Float64,
-                    sigma_ub :: Float64,
-                    tau :: Float64,
-                    final_loss_improvement :: Float64,
-                    min_weight :: Float64,
-                    max_iters :: Int64,
-                    max_cd_iters :: Int64,
+    fit_img_tiles(img,
+                  main_tile_width :: Int64,
+                  tile_overlap :: Int64,
+                  sigma_lb :: Float64,
+                  sigma_ub :: Float64,
+                  tau :: Float64,
+                  final_loss_improvement :: Float64,
+                  min_weight :: Float64,
+                  max_iters :: Int64,
+                  max_cd_iters :: Int64,
                     noise_mean :: Float64
                 )
+
+Arguments:
+- `img` : a 2048x2048 image to fit
+- `main_tile_width` : the width of the main tile 
+- `tile_overlap` : width of the overlaps of tiles with their neighbors 
+- `sigma_lb` : the lowest allowed σ of a PSF
+- `sigma_ub` : the highest allowed σ of a PSF
+- `tau` : not used in current version
+- `final_loss_improvement` : ADCG terminates when the improvement in the loss function in subsequent iterations is less than this
+- `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
+- `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
+- `noise_mean` : the noise mean is subtracted from the image before fitting
+
+Fits gaussian point spread functions in an arbitrarily sizedsquare image with ADCG by splitting it into overlapping pixel tiles of user specified size. 
 
 """
 function fit_img_tiles(img,
@@ -230,6 +256,15 @@ function remove_duplicates(points :: DataFrame,
     ps = Matrix(hcat(points[!, "x"], points[!, "y"], points[!, "s"], points[!, "w"])')
     #ws = points[!, "w"]
     #ps, ws = remove_duplicates(ps, ws, img, sigma_lb, sigma_ub, tau, noise_mean, min_allowed_separation, dims)
+    while true
+        ps_new = remove_duplicates(ps, img, sigma_lb, sigma_ub, tau, noise_mean, min_allowed_separation, dims)
+        if prod(size(ps)) == prod(size(ps_new))
+            ps = ps_new
+            break
+        else
+            ps = ps_new
+        end
+    end
     ps = remove_duplicates(ps, img, sigma_lb, sigma_ub, tau, noise_mean, min_allowed_separation, dims)
     points_df = DataFrame()
     points_df[!, "x"] = ps[1,:]
