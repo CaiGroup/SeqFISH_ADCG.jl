@@ -8,6 +8,10 @@ ADCG does this by taking an alternating approach to fitting: add a single molecu
 
 Here we extend ADCG to apply it specifically to SeqFISH Data. 
 
+Generally, this package can be used to fit images that are composed of a superposition of Gaussian point spread functions. The fit procedure is iterative. At each iteration, a new point spread function is added to the model of the image, and the parameters (position and width) of the point spread functions previously in the model are adjusted to accomodate the newcomer.
+
+The example jupyter notebooks show how to preprocess a SeqFISH image, and then how use the package to fit a model locating the point spread functions.
+
 ## Installation
 
 From Julia, install by running the commands:
@@ -17,6 +21,7 @@ import Pkg
 Pkg.add(url="https://github.com/CaiLab/SeqFISH_ADCG")
 ```
 
+## Example
 
 ## API Reference
 
