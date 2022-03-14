@@ -94,6 +94,8 @@ end
                             max_cd_iters :: Int64,
                             noise_mean :: Float64
                             )
+Run ADCG on a 2048x2048 pixel image by breaking it up into overlapping tiles, running ADCG on each tile, and aggregating the results
+It is necessary to call remove duplicates on the resultant image to remove the duplicates in the regions of overlapping tiles.
 """
 function fit_2048x2048_img_tiles(img,
                            sigma_lb :: Float64,
@@ -128,7 +130,9 @@ end
                     max_cd_iters :: Int64,
                     noise_mean :: Float64
                 )
-
+Run ADCG on a square image of arbitrar sized pixel image by breaking it up into overlapping tiles of user specified
+width and overlap, then running ADCG on each tile and aggregating the results
+It is necessary to call remove duplicates on the resultant image to remove the duplicates in the regions of overlapping tiles.
 """
 function fit_img_tiles(img,
                        main_tile_width :: Int64,
