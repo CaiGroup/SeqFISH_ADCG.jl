@@ -161,7 +161,7 @@ function phi(s :: GaussBlur2D, parameters :: Matrix{Float64})
   return vec(v_y*v_x')
 end
 
-
+"""
 function solveFiniteDimProblem(model :: GaussBlur, thetas, y, tau)
   nthetas = size(thetas)[2]
   nparams = size(thetas)[1]
@@ -182,6 +182,7 @@ function solveFiniteDimProblem(model :: GaussBlur, thetas, y, tau)
   results = lm(A, y)
   return coef(results)
 end
+"""
 
 function lmo(model :: GaussBlur2D, r :: Vector{Float64})
   lb_0,ub_0 = parameterBounds(model)

@@ -43,7 +43,7 @@ function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: 
     end
   end
   println("Hit max iters in frank-wolfe!")
-  return thetas#, weights
+  return thetas
 end
 
 function localUpdate(sim :: ForwardModel,lossFn :: Loss,
@@ -51,7 +51,6 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
   w_ind = size(thetas)[1]
   for cd_iter = 1:max_iters
     old_thetas = thetas
-
     #remove points that are too close together
     #ToDo, make sure not to place new dot where dots have been removed
     #thetas, weights = remove_duplicates(thetas, weights, y, sim.sigma_lb, sim.sigma_ub, tau, 0.0, sim.sigma_lb)
@@ -64,7 +63,7 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     elseif typeof(sim) == GaussBlur3D
       thetas[4:6,:] = new_sigmas
     else
-      error("Unknown Sourse funtion type")
+      error("Unknown Source funtion type")
     end
 
     #remove points with low weight

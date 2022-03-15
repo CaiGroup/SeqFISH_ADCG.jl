@@ -3,7 +3,7 @@ using SeqFISH_ADCG
 using Test
 
 
-sigma_xy_lb = 1.6
+sigma_xy_lb = 1.5
 sigma_xy_ub = 1.7# 1.5
 sigma_z_lb = 0.9
 sigma_z_ub = 1.1
@@ -29,7 +29,7 @@ test_img .+= 0.1*rand(length(test_img))
 test_stack = reshape(test_img, width, width, n_slices)
 
 min_weight = 0.5
-final_loss_improvement = 3.0
+final_loss_improvement = 0.03
 max_iters = 200
 max_cd_iters = 100
 
@@ -37,3 +37,5 @@ inputs = (test_stack, sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_lo
 results = SeqFISH_ADCG.fit_stack(inputs)
 
 println(results)
+
+@test all(isapprox(sort.([p_true[1:3,:], results[1:3,:]],dims=2)...,atol=0.05))
