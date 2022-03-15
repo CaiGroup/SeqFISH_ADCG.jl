@@ -183,8 +183,6 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   lower_bounds!(opt, lb)
   upper_bounds!(opt, ub)
   (optf,optx,ret) = optimize(opt, vec(thetas[1:3,:]))
-  println("coord loc descent:")
-  println(optx)
   return reshape(optx,3,nPoints), optf
 end
 
@@ -199,24 +197,13 @@ function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
 
   #coordinates are fixed, sigma is input parameter to be optimized
   function f_and_g!(sigmas_weights,g)
-      #println("start f_and_g")
       sigmas_weights = reshape(sigmas_weights, 3, nPoints)
-      #ps = vcat(thetas[4:6,:], sigmas_weights)
       ps = vcat(thetas[1:3,:], sigmas_weights)
-      #println("ps:")
-      #println(ps)
-      #localDescent_f_and_g!(vec(ps),g,su)
-      #ps = reshape(x, 3, Int64(length(x)/3))
       output = phi(su.s,ps)
       residual = su.y .- output
       l,v_star = loss(su.lossFn,residual)
       sw_g = computeGradient(su.s, ps, residual)[4:6, :]
-      #println("size(ps): ", size(ps))
-      #println("computed gradient")
-      #println("size(g): ", size(g))
-      #println("size(sw_g): ", size(sw_g))
-      g[:] = sw_g #computeGradient(su.s, ps, residual)[4:6]
-      #println("assign_grad")
+      g[:] = sw_g 
       return l
   end
   opt = Opt(NLopt.LD_MMA, 3*nPoints)#length(thetas))
@@ -232,10 +219,6 @@ function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   if ret == :FORCED_STOP
     error("Forced Stop in sigma weight Optimization")
   end
-  println("b4: ")
-  println(thetas[4:6, :])
-  println("sigma loc descent:")
-  println(optx)
   return reshape(optx, 3, nPoints), optf
 end
 
@@ -309,7 +292,5 @@ function lmo(model :: GaussBlur3D, r :: Vector{Float64}) #v :: Vector{Float64})
   if ret == :FORCED_STOP
     error("Forced Stop in Coordinate Optimization")
   end
-  println("lmo optx:")
-  println(optx)
   return (optx, optf)
 end
