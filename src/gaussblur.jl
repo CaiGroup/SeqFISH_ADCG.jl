@@ -1,6 +1,5 @@
 export GaussBlur, GaussBlur2D
 
-using SpecialFunctions
 using LinearAlgebra
 using GLM
 

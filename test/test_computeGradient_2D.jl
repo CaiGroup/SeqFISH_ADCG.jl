@@ -1,6 +1,5 @@
 using LinearAlgebra
 using SeqFISH_ADCG
-#using Plots
 using Test
 using Random
 
@@ -15,7 +14,7 @@ w_true = [1.0, 0.0]
 
 gblur = GaussBlur2D(sigma_lb, sigma_ub, width)
 
-test_img = phi(gblur, p_true) #.+ rand(1024)./1000
+test_img = phi(gblur, p_true) 
 
 function resids(img, ps)
     trial_output = phi(gblur, ps)
@@ -24,7 +23,6 @@ function resids(img, ps)
 end
 
 function trial_gradient(test_img, _trial_point, _trial_weight)
-    #trial_point = Matrix{Float64}(undef, 3, 1)
     trial_point = Matrix{Float64}(undef, 4, 1)
     trial_point[1:3] = _trial_point
     trial_point[4] = _trial_weight
@@ -34,8 +32,6 @@ function trial_gradient(test_img, _trial_point, _trial_weight)
 end
 
 function empPartialDeriv(img, trial_point, trial_weight, Δ)
-    #residuals = resids(img, trial_point .- Δ, trial_weight)
-    #Δresiduals = resids(img, trial_point .+ Δ, trial_weight)
     residuals = resids(img, trial_point .- Δ)
     Δresiduals = resids(img, trial_point .+ Δ)
     sum(Δresiduals.^2 .- residuals.^2)/(2*norm(Δ))
