@@ -75,7 +75,7 @@ function fit_stack_tiles(img_stack,
     #fit_tile_inputs = [(tiles[i], sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(tiles)]
 
     #fit tiles
-    tile_fits = pmap(fit_stack, fit_tile_inputs)
+    tile_fits = map(fit_stack, fit_tile_inputs)
     #tile_fits = map(fit_tile, fit_tile_inputs)
     #println("finished fitting tiles, putting together now...")
 
