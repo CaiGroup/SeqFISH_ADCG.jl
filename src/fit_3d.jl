@@ -67,6 +67,10 @@ function fit_stack_tiles(img_stack,
     tiles_across = ceil(Int64, img_width/tile_width)
     bnds_start = tile_width*Array(0:(tiles_across-1)) .+ 1
     bnds_end = tile_width*Array(1:(tiles_across-1)) .+ overhang
+    println("img_width; $img_width")
+    println("tile_width: $tile_width")
+    println("tiles_across: $tiles_across")
+
     push!(bnds_end, img_width)
     # define overlapping tiles
     coords = [((bnds_start[i]),bnds_end[i], (bnds_start[j]),bnds_end[j]) for i in 1:tiles_across, j in 1:(tiles_across-1)]
@@ -75,6 +79,7 @@ function fit_stack_tiles(img_stack,
     #fit_tile_inputs = [(tiles[i], sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(tiles)]
 
     #fit tiles
+    println("length(fit_tile_inputs): ", length(fit_tile_inputs))
     tile_fits = map(fit_stack, fit_tile_inputs)
     #tile_fits = map(fit_tile, fit_tile_inputs)
     #println("finished fitting tiles, putting together now...")
@@ -84,20 +89,20 @@ function fit_stack_tiles(img_stack,
 
     #concatenate points
     ps = []
-    ws = []
     for i = 1:length(trimmed_tile_fits)
-        p = trimmed_tile_fits[i][1]
+        println("i: $i")
+        p = trimmed_tile_fits[i]
+
         #p .*= (tile_width + overhang)
         if length(p) > 0
             p[1,:] .+= coords[i][3]
             p[2,:] .+= coords[i][1]
-            push!(ps, trimmed_tile_fits[i][1])
-            push!(ws, trimmed_tile_fits[i][2])
+            push!(ps, p)#trimmed_tile_fits[i][1])
         end
     end
-
+    println("length(ps): ", length(ps))
     ps = hcat(ps...)
-    ws = cat(ws..., dims=1)
+    println("size(ps): ", size(ps))
 
     points_df = DataFrame()
     points_df[!, "x"] = ps[1,:]
@@ -105,7 +110,7 @@ function fit_stack_tiles(img_stack,
     points_df[!, "z"] = ps[3,:]
     points_df[!, "s_xy"] = ps[4,:]
     points_df[!, "s_z"] = ps[5,:]
-    points_df[!, "w"] = ws
+    points_df[!, "w"] = ps[6,:]
 
     return points_df
 end
