@@ -192,12 +192,12 @@ function remove_duplicates3d(points :: DataFrame,
                            min_allowed_separation :: Float64
                            )
 
-    ps = ps = hcat(points[!, "x"],
+    ps = Array(hcat(points[!, "x"],
                    points[!, "y"],
                    points[!,"z"],
                    points[!, "s_xy"],
                    points[!, "s_z"],
-                   points[!, "w"])'
+                   points[!, "w"])')
     #ws = points[!, "w"]
     #ps, ws = remove_duplicates(ps, ws, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
     ps = remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
