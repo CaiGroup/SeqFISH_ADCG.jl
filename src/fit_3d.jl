@@ -85,7 +85,8 @@ function fit_stack_tiles(img_stack,
     #println("finished fitting tiles, putting together now...")
 
     #throw out points within 2 pixels of the edge of each tile.
-    trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
+    #trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
+    trimmed_tile_fits = [trim_tile_fit!(tile_fit, tile_width + tile_overlap) for tile_fit in tile_fits]
 
     #concatenate points
     ps = []
