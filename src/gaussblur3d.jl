@@ -1,5 +1,5 @@
 export GaussBlur3D
-using JumP
+using JuMP
 using GLPK
 
 struct GaussBlur3D <: GaussBlur
@@ -156,6 +156,7 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   nPoints = size(thetas,2)
   im_lb = fill(lb[1], nPoints)
   im_ub = fill(ub[2], nPoints)
+  #println("ub: $ub")
   #x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[1,:] .- s.gb2d.psf_thresh)
   #x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[2,:] .- s.gb2d.psf_thresh)
   #x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[3,:] .- s.psf_z_thresh)
@@ -172,12 +173,12 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
 
   model = Model(GLPK.Optimizer)
 
-  @variable(model, x1=[1:nPoints], start=thetas[1,:])
-  @variable(model, x2=[1:nPoints], start=thetas[2,:])
-  @variable(model, x3=[1:nPoints], start=thetas[3,:])
-  σxy = theta[4,:] 
-  σz = theta[5,:]
-  w = theta[6,:]
+  @variable(model, x1[i=1:nPoints], start=thetas[1,i])
+  @variable(model, x2[i=1:nPoints], start=thetas[2,i])
+  @variable(model, x3[i=1:nPoints], start=thetas[3,i])
+  σxy = thetas[4,:] 
+  σz = thetas[5,:]
+  w = thetas[6,:]
 
   @constraint(model, x1_lb .<= x1)
   @constraint(model, x2_lb .<= x2)
@@ -186,11 +187,22 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   @constraint(model, x2 .<= x2_ub)
   @constraint(model, x3 .<= x3_ub)
 
-  @NLobjective(model, Min, sum([w[l]exp(-((x1[l]-i)^2 + (x2[l]-j)^2)/(2σxy[l]^2) -((x3[l]-k)^2)/(2σz[l]^2)) - y[i,j,k]]) for i in 
+  #println("size(y): ", size(y))
+  ni, nj, nk = Int64.(ub[1:3])
+  #println("ni: $ni, nj: $nj, nk: $nk")
+  r = reshape(y, s.n_pixels, s.n_pixels, s.n_slices)
+
+  @NLobjective(model, Min, 
+    sum(w[l]exp(-((x1[l]-i)^2 + (x2[l]-j)^2)/(2σxy[l]^2) -((x3[l]-k)^2)/(2σz[l]^2)) - r[i,j,k] for i in 1:ni, j in 1:nj, k in 1:nk, l in 1:nPoints)
+    )
+  optimize!(model)
+  println("val x1:")
+  println(value.(x1))
 
   #lb = vec(vcat(x1_lb', x2_lb', x3_lb'))
   #ub = vec(vcat(x1_ub', x2_ub', x3_ub'))
 
+  """
   p = size(thetas,1)
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
   function f_and_g!(x,g)
@@ -207,6 +219,7 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   upper_bounds!(opt, ub)
   (optf,optx,ret) = optimize(opt, vec(thetas[1:3,:]))
   return reshape(optx,3,nPoints), optf
+  """
 end
 
 function localDescent_sigma(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})
