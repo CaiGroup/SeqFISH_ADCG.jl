@@ -1,5 +1,6 @@
 export GaussBlur3D
-
+using JumP
+using GLPK
 
 struct GaussBlur3D <: GaussBlur
   sigma_z_lb :: Float64
@@ -107,31 +108,37 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
   gradient = zeros(size(thetas))
 
   #allocate temporary variables...
-  f_x1 = zeros(model.n_pixels)
-  f_x2 = zeros(model.n_pixels)
-  fpx2 = zeros(model.n_pixels)
-  fpx1 = zeros(model.n_pixels)
-  fpx1s = zeros(model.n_pixels)
-  fpx2s = zeros(model.n_pixels)
+  fx1 = zeros(model.n_pixels)
+  fx2 = zeros(model.n_pixels)
+  #fpx2 = zeros(model.n_pixels)
+  ∂f_∂x₁ = zeros(model.n_pixels)
+  ∂f_∂x₂= zeros(model.n_pixels)
+  #fpx1 = zeros(model.n_pixels)
+  #fpx1s = zeros(model.n_pixels)
+  ∂²f_∂x₁² = zeros(model.n_pixels)
+  #fpx2s = zeros(model.n_pixels)
+  ∂²f_∂x₂² = zeros(model.n_pixels)
 
   #compute gradient
   for l = 1:size(thetas,2)
-    point = vec(thetas[:,l])
-    computeFG!(model.gb2d, point[1], point[4], f_x1, fpx1, fpx1s)
-    computeFG!(model.gb2d, point[2], point[4], f_x2, fpx2, fpx2s)
+    x₁, x₂, x₃, σₓ₁₂, σₓ₃, w = vec(thetas[:,l])
+    #point = vec(thetas[:,l])
+    #x₁, x₂, x₃, σₓ₁₂, σₓ₃, w = point
+    computeFG!(model.gb2d, x₁, σₓ₁₂, fx1, ∂f_∂x₁, ∂²f_∂x₁²)
+    computeFG!(model.gb2d, x₂, σₓ₁₂, fx2, ∂f_∂x₂, ∂²f_∂x₂²)
 
 
 
     k_sums = zeros(size(thetas)[1])
     for k = 1:model.n_slices
-      fz = exp(-(k-point[3])^2/(2 * point[5]^2))
+      fz = exp(-(k-x₃)^2/(2 * σₓ₃^2))
 
-      ∂loss∂x₁ₗ = - point[6] * fz *(f_x2' * r[:,:,k] * fpx1)/(point[4]^2)
-      ∂loss∂x₂ₗ = - point[6] * fz * (fpx2' * r[:,:,k] * f_x1)/(point[4]^2)
-      ∂loss∂σₓₗ = - point[6] * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(point[4]^3)
-      ∂loss∂x₃ₗ = - point[6] * (k - point[3]) * fz * (f_x2' * r[:,:,k] * f_x1)/(point[5]^2)
-      ∂loss∂σzₗ = - point[6] * (k - point[3])^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(point[3]^3)
-      ∂loss∂wₖ = - fz* (f_x2' * r[:,:,k] * f_x1)
+      ∂loss∂x₁ₗ = - w * fz *(fx2' * r[:,:,k] * ∂f_∂x₁)/(σₓ₁₂^2)
+      ∂loss∂x₂ₗ = - w * fz * (∂f_∂x₂' * r[:,:,k] * fx1)/(σₓ₁₂^2)
+      ∂loss∂σₓₗ = - w * fz * ( fx2' * r[:,:,k] * ∂²f_∂x₁² + ∂²f_∂x₂²' * r[:,:,k] * fx1)/(σₓ₁₂^3)
+      ∂loss∂x₃ₗ = - w * (k - x₃) * fz * (fx2' * r[:,:,k] * fx1)/(σₓ₃^2)
+      ∂loss∂σzₗ = - w * (k - x₃)^2 * fz* (fx2' * r[:,:,k] * fx1)/(x₃^3)
+      ∂loss∂wₖ = - fz* (fx2' * r[:,:,k] * fx1)
 
       k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₖ]
     end
@@ -141,21 +148,48 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
   return gradient
 end
 
+get_greater(a, b) = maximum([a,b])
+get_lesser(a, b) = minimum([a,b])
 
 function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})
   lb,ub = parameterBounds(s)
   nPoints = size(thetas,2)
   im_lb = fill(lb[1], nPoints)
   im_ub = fill(ub[2], nPoints)
-  x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[1,:] .- s.gb2d.psf_thresh)
-  x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[2,:] .- s.gb2d.psf_thresh)
-  x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[3,:] .- s.psf_z_thresh)
-  x1_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[1,:] .+ s.gb2d.psf_thresh)
-  x2_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[2,:] .+ s.gb2d.psf_thresh)
-  x3_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[3,:] .+ s.psf_z_thresh)
+  #x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[1,:] .- s.gb2d.psf_thresh)
+  #x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[2,:] .- s.gb2d.psf_thresh)
+  #x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[3,:] .- s.psf_z_thresh)
+  #x1_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[1,:] .+ s.gb2d.psf_thresh)
+  #x2_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[2,:] .+ s.gb2d.psf_thresh)
+  #x3_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[3,:] .+ s.psf_z_thresh)
 
-  lb = vec(vcat(x1_lb', x2_lb', x3_lb'))
-  ub = vec(vcat(x1_ub', x2_ub', x3_ub'))
+  x1_lb = get_greater.(im_lb, thetas[1,:] .- s.gb2d.psf_thresh)
+  x2_lb = get_greater.(im_lb, thetas[2,:] .- s.gb2d.psf_thresh)
+  x3_lb = get_greater.(im_lb, thetas[3,:] .- s.psf_z_thresh)
+  x1_ub = get_lesser.(im_ub, thetas[1,:] .+ s.gb2d.psf_thresh)
+  x2_ub = get_lesser.(im_ub, thetas[2,:] .+ s.gb2d.psf_thresh)
+  x3_ub = get_lesser.(im_ub, thetas[3,:] .+ s.psf_z_thresh)
+
+  model = Model(GLPK.Optimizer)
+
+  @variable(model, x1=[1:nPoints], start=thetas[1,:])
+  @variable(model, x2=[1:nPoints], start=thetas[2,:])
+  @variable(model, x3=[1:nPoints], start=thetas[3,:])
+  σxy = theta[4,:] 
+  σz = theta[5,:]
+  w = theta[6,:]
+
+  @constraint(model, x1_lb .<= x1)
+  @constraint(model, x2_lb .<= x2)
+  @constraint(model, x3_lb .<= x3)
+  @constraint(model, x1 .<= x1_ub)
+  @constraint(model, x2 .<= x2_ub)
+  @constraint(model, x3 .<= x3_ub)
+
+  @NLobjective(model, Min, sum([w[l]exp(-((x1[l]-i)^2 + (x2[l]-j)^2)/(2σxy[l]^2) -((x3[l]-k)^2)/(2σz[l]^2)) - y[i,j,k]]) for i in 
+
+  #lb = vec(vcat(x1_lb', x2_lb', x3_lb'))
+  #ub = vec(vcat(x1_ub', x2_ub', x3_ub'))
 
   p = size(thetas,1)
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
