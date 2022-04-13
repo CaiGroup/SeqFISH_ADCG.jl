@@ -22,10 +22,13 @@ function fit_stack(inputs)
     target = Float64.(vec(stack))#.-noise_mean#*1.5
     target[target .< 0] .= 0
 
+    
     sum_target = sum(target)
+    """
     if sum_target == 0
         return [], []
     end
+    """
 
     #tau = sum(target[target .> 0])/final_loss_improvement + 1.0#/5.0 + 1.0
     #tau = sum_target
@@ -91,7 +94,6 @@ function fit_stack_tiles(img_stack,
     #concatenate points
     ps = []
     for i = 1:length(trimmed_tile_fits)
-        println("i: $i")
         p = trimmed_tile_fits[i]
 
         #p .*= (tile_width + overhang)
@@ -116,76 +118,6 @@ function fit_stack_tiles(img_stack,
     return points_df
 end
 
-"""
-function remove_duplicates3d(points :: DataFrame,
-                           img,
-                           sigma_lb :: Float64,
-                           sigma_ub :: Float64,
-                           tau :: Float64,
-                           noise_mean :: Float64,
-                           min_allowed_separation :: Float64
-                           )
-
-    ps = ps = hcat(points[!, "x"], points[!, "y"], points[!, "s"])'
-    ws = points[!, "w"]
-    ps, ws = remove_duplicates(ps, ws, img, sigma_lb, sigma_ub, tau, noise_mean, min_allowed_separation)
-    points_df = DataFrame()
-    points_df[!, "x"] = ps[1,:]
-    points_df[!, "y"] = ps[2,:]
-    points_df[!, "z"] = ps[3,:]
-    points_df[!, "s_xy"] = ps[4,:]
-    points_df[!, "s_z"] = ps[5,:]
-    points_df[!, "w"] = ws
-    return points_df
-end
-
-function remove_duplicates3d(ps,
-                           ws :: Vector{Float64},
-                           img,
-                           sigma_lb :: Float64,
-                           sigma_ub :: Float64,
-                           tau :: Float64,
-                           noise_mean :: Float64,
-                           min_allowed_separation :: Float64
-                           )
-
-    #run solveFiniteDimProblem to remove duplicate points
-    coords = ps[1:3, :]
-    n_ps_init = length(ws)
-    target = vec(img).-noise_mean
-    target[target .< 0] .= 0
-    tau = sum(target)
-    bt = BallTree(coords)
-    grps = inrange(bt, coords, min_allowed_separation, true)
-    lone_point_grps = filter(g->length(g) == 1, grps)
-    lone_point_inds = map(ia->ia[1], lone_point_grps)
-
-    lone_points = ps[:, lone_point_inds]
-    lone_weights = ws[lone_point_inds]
-
-    filter!(g-> length(g)>1, grps)
-    grps = unique(grps)
-
-    grp_brightest_inds = []
-    #println("n groups: ", length(grps))
-    for grp in grps
-        push!(grp_brightest_inds, grp[argmax(ws[grp])])
-    end
-    sort!(grp_brightest_inds)
-    bright_dup_ps = ps[:, grp_brightest_inds]
-    bright_dup_ws = ws[grp_brightest_inds]
-
-    nremoved = length(ws) - length(lone_weights) - length(bright_dup_ws)
-    if nremoved > 0
-        println("removed ", nremoved, " duplicates")
-    end
-
-    ps = hcat(lone_points, bright_dup_ps)
-    ws = cat(lone_weights, bright_dup_ws, dims=1)
-    return ps, ws
-end
-"""
-
 function remove_duplicates3d(points :: DataFrame,
                            sigma_lb :: Float64,
                            sigma_ub :: Float64,
@@ -198,8 +130,7 @@ function remove_duplicates3d(points :: DataFrame,
                    points[!, "s_xy"],
                    points[!, "s_z"],
                    points[!, "w"])')
-    #ws = points[!, "w"]
-    #ps, ws = remove_duplicates(ps, ws, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+
     ps = remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
 
     points_df = DataFrame()
