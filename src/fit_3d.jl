@@ -60,6 +60,9 @@ function fit_stack_tiles(img_stack,
                        max_cd_iters :: Int64
                 )
 
+    tile_depth = 3
+    tile_depth_overhang= 1
+
     #@assert size(img) == (2048, 2048)
     img_height, img_width, nslices = size(img_stack)
 
@@ -68,16 +71,21 @@ function fit_stack_tiles(img_stack,
 
     #tiles_across = Int64(2048/tile_width)
     tiles_across = ceil(Int64, img_width/tile_width)
+    tiles_deep = ceil(Int64, nslices/tile_depth)
     bnds_start = tile_width*Array(0:(tiles_across-1)) .+ 1
     bnds_end = tile_width*Array(1:(tiles_across-1)) .+ overhang
+    z_start = tile_depth*Array(0:(tiles_deep-1)) .+ 1
+    z_end = tile_depth*Array(1:(tiles_deep-1)) .+ tile_depth_overhang
     println("img_width; $img_width")
     println("tile_width: $tile_width")
     println("tiles_across: $tiles_across")
 
     push!(bnds_end, img_width)
+    push!(z_end, nslices)
+
     # define overlapping tiles
-    coords = [((bnds_start[i]),bnds_end[i], (bnds_start[j]),bnds_end[j]) for i in 1:tiles_across, j in 1:(tiles_across-1)]
-    stacks = [img_stack[cds[1]:cds[2],cds[3]:cds[4], :] for cds in coords]
+    coords = [(bnds_start[i],bnds_end[i], bnds_start[j],bnds_end[j], z_start[k], z_end[k]) for i in 1:tiles_across, j in 1:(tiles_across-1), k in 1:tiles_deep]
+    stacks = [img_stack[cds[1]:cds[2], cds[3]:cds[4], cds[5]:cds[6]] for cds in coords]
     fit_tile_inputs = [(stacks[i], sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(stacks)]
     #fit_tile_inputs = [(tiles[i], sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(tiles)]
 
