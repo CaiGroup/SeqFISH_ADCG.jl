@@ -117,6 +117,8 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
   #compute gradient
   for l = 1:size(thetas,2)
     point = vec(thetas[:,l])
+    x₁ₗ, x₂ₗ, x₃ₗ, σₓₗ, σzₗ, wₗ = vec(thetas[:, l])
+    vec(thetas[:,l])
     computeFG!(model.gb2d, point[1], point[4], f_x1, fpx1, fpx1s)
     computeFG!(model.gb2d, point[2], point[4], f_x2, fpx2, fpx2s)
 
@@ -124,16 +126,16 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
 
     k_sums = zeros(size(thetas)[1])
     for k = 1:model.n_slices
-      fz = exp(-(k-point[3])^2/(2 * point[5]^2))
+      fz = exp(-(k-x₃ₗ)^2/(2 * σzₗ^2))
 
-      ∂loss∂x₁ₗ = - point[6] * fz *(f_x2' * r[:,:,k] * fpx1)/(point[4]^2)
-      ∂loss∂x₂ₗ = - point[6] * fz * (fpx2' * r[:,:,k] * f_x1)/(point[4]^2)
-      ∂loss∂σₓₗ = - point[6] * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(point[4]^3)
-      ∂loss∂x₃ₗ = - point[6] * (k - point[3]) * fz * (f_x2' * r[:,:,k] * f_x1)/(point[5]^2)
-      ∂loss∂σzₗ = - point[6] * (k - point[3])^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(point[3]^3)
-      ∂loss∂wₖ = - fz* (f_x2' * r[:,:,k] * f_x1)
+      ∂loss∂x₁ₗ = - wₗ * fz *(f_x2' * r[:,:,k] * fpx1)/(σₓₗ^2)
+      ∂loss∂x₂ₗ = - wₗ * fz * (fpx2' * r[:,:,k] * f_x1)/(σₓₗ^2)
+      ∂loss∂σₓₗ = - wₗ * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(σₓₗ^3)
+      ∂loss∂x₃ₗ = - wₗ * (k - x₃ₗ) * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^2)
+      ∂loss∂σzₗ = - wₗ * (k - x₃ₗ)^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(σzₗ^3)
+      ∂loss∂wₗ = - fz* (f_x2' * r[:,:,k] * f_x1)
 
-      k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₖ]
+      k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₗ]
     end
     #gradient[:, l] = [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂σₗ]
     gradient[:, l] = k_sums ./ model.n_slices
