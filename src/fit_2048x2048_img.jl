@@ -58,8 +58,15 @@ function fit_tile(inputs)
       end
       return false
     end
-    points = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
-    return points
+    #points = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
+    records = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
+    #return points
+    return records
+end
+
+function trim_tile_records!(tile_records, width)
+    trim_tile_fit!(tile_records.records, width)
+    trim_tile_fit!(tile_records.last_iteration, width)
 end
 
 function trim_tile_fit!(tile_fit, width)
@@ -67,13 +74,14 @@ function trim_tile_fit!(tile_fit, width)
     if length(ps) == 0
         return tile_fit
     end
-    xs = ps[1,:]
-    ys = ps[2,:]
+    #xs = ps[1,:]
+    #ys = ps[2,:]
 
-    to_keep = (xs .> 2) .| (ys .> 2) .| (xs .< width-2) .| (ys .< width-2)
-
-    ps_trim = ps[:, to_keep]
-    return ps_trim 
+    #to_keep = (xs .> 2) .| (ys .> 2) .| (xs .< width-2) .| (ys .< width-2)
+    to_keep = (ps.x .> 2) .| (ps.y .> 2) .| (ps.x .< width-2) .| (ps.y .< width-2)
+    return ps[to_keep, :]
+    #ps_trim = ps[:, to_keep]
+    #return ps_trim 
 end
 
 """
@@ -183,8 +191,9 @@ function fit_img_tiles(img,
     tile_fits = map(fit_tile, fit_tile_inputs)
 
     #throw out points within 2 pixels of the edge of each tile.
-    trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
-
+    #trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
+    trimmed_tile_fits = [trim_tile_records!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
+    
     #concatenate points
     ps = []
     for i = 1:length(trimmed_tile_fits)

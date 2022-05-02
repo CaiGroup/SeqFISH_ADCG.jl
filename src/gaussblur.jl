@@ -2,6 +2,7 @@ export GaussBlur, GaussBlur2D
 
 using LinearAlgebra
 using GLM
+using DataFrames
 
 abstract type GaussBlur <: BoxConstrainedDifferentiableModel end
 
@@ -279,4 +280,40 @@ function localDescent_sigma(s :: GaussBlur2D, lossFn :: Loss, thetas ::Matrix{Fl
   end
 
   return reshape(optx,2, nPoints), optf
+end
+
+make_KDTree(model :: GaussBlur, pnts :: DataFrame) = KDTree(Array([pnts.x pnts.y]'))
+
+function initialize_dot_records(model :: GaussBlur, initial_ps :: Matrix)
+  initial_ps = length(initial_ps) > 0 ? DataFrame(initial_ps', [:x, :y, :s, :w]) : DataFrame(x=[],y=[],s=[],w=[])
+  records = DataFrame(x=[],y=[],z=[],s=[],w=[],highestmw=[],lowestmw=[])
+  last_iter = DataFrame(x=[],y=[],z=[],s=[],w=[],highestmw=[],lowestmw=[], records_idxs=[])
+  return DotRecords(records, last_iter, KDTree([Float64[] Float64[]]))
+end
+
+function update_records!(model :: GaussBlur, records :: DotRecords, new_iteration :: Matrix, ϵ :: Float64)
+
+  # search for matches from last iteration
+  idxs, dists = knn(records.last_iteration_tree, new_iteration, 1)
+  matched_idxs = idxs[dists .<= ϵ]
+  new_dot_idxs = idxs[dists .> ϵ]
+
+  # update records
+  mw = minimum(new_iteration[4,:])
+  matched_dot_record_idxs = records.last_iteration.records_idxs[matched_idxs]
+  records.records.lowest_mw[matched_dot_record_idxs] .= mw
+  new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :s, :w]) : DataFrame(x=[],y=[],s=[],w=[])
+  new_dots = new_iteration[new_dot_idxs,:]
+  new_dots.lowest_mw .= mw
+  new_dots.highest_mw .= mw
+  vcat(records.records, new_dots)
+
+  #update last iteration
+  new_iteration.records_idxs .= 0
+  new_iteration.records_idxs[matched_idxs] .= matched_dot_record_idxs
+  new_iteration.records_idxs[new_dot_idxs] .= Array((nrow(records.records)-nrow(new_dots)):nrow(records.records))
+  records.last_iteration = new_iteration
+  records.last_iteration_tree = make_KDTree(model, records.last_iteration)
+
+  return records
 end

@@ -1,6 +1,7 @@
 export ADCG
 
 function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: Float64, min_weight :: Float64;
+  match_ϵ :: Float64 = 0.01,
   callback :: Function = (old_thetas,thetas,output,old_obj_val) -> false,
   max_iters :: Int64 = 50,
   max_cd_iters :: Int64 = 200)
@@ -9,6 +10,8 @@ function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: 
   @assert tau > 0.0
   bound = -Inf
   thetas = zeros(0,0)
+
+  dot_record = initialize_dot_records(sim)
   #weights = zeros(0)
   #cache the forward model applied to the current measure.
   output = zeros(length(y))
@@ -39,11 +42,14 @@ function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: 
     thetas = localUpdate(sim,lossFn,thetas,y,tau,max_cd_iters, min_weight)
     output = phi(sim, thetas)
     if callback(old_thetas, thetas, output, objective_value)
-      return old_thetas
+      return dot_record
+      #return old_thetas
     end
+    update_records!(sim, dot_record, thetas, match_ϵ)
   end
   println("Hit max iters in frank-wolfe!")
-  return thetas
+  return dot_record
+  #return thetas
 end
 
 function localUpdate(sim :: ForwardModel,lossFn :: Loss,
