@@ -161,29 +161,6 @@ function phi(s :: GaussBlur2D, parameters :: Matrix{Float64})
   return vec(v_y*v_x')
 end
 
-"""
-function solveFiniteDimProblem(model :: GaussBlur, thetas, y, tau)
-  nthetas = size(thetas)[2]
-  nparams = size(thetas)[1]
-  if nthetas == 0
-    return Float64[]
-  end
-
-  if nparams == 3
-    A = zeros(model.n_pixels^2, nthetas)
-  elseif nparams == 5
-    A = zeros(model.n_slices*model.n_pixels^2, nthetas)
-  end
-
-  for i = 1:nthetas
-    A[:, i] = vec(phi(model, reshape(thetas[:,i], nparams, 1)))
-  end
-
-  results = lm(A, y)
-  return coef(results)
-end
-"""
-
 function lmo(model :: GaussBlur2D, r :: Vector{Float64})
   lb_0,ub_0 = parameterBounds(model)
   initial_x = getStartingPoint(model, r)
@@ -317,20 +294,20 @@ function update_records!(model :: GaussBlur, records :: DotRecords, new_iteratio
   
   if length(matched_idxs) > 0
     matched_dot_record_idxs = records.last_iteration.records_idxs[matched_idxs]
-    records.records.lowest_mw[filter(i -> i !=0, matched_dot_record_idxs)] .= mw
+    records.records[filter(i -> i !=0, matched_dot_record_idxs), "lowest_mw"] .= mw
   end
   
   new_dots = new_iteration[new_dot_idxs,:]
-  new_dots.lowest_mw .= mw
-  new_dots.highest_mw .= mw
+  new_dots[!, "lowest_mw"] .= mw
+  new_dots[!, "highest_mw"] .= mw
   records.records = vcat(records.records, new_dots)
 
   #update last iteration
-  new_iteration.records_idxs .= 0
+  new_iteration[!, "records_idxs"] .= 0
   if length(matched_idxs) > 0    
-    new_iteration.records_idxs[matched_idxs] .= matched_dot_record_idxs
+    new_iteration[matched_idxs, "records_idxs"] .= matched_dot_record_idxs
   end
-  new_iteration.records_idxs[new_dot_idxs] .= Array((nrow(records.records)-nrow(new_dots)+1):nrow(records.records))
+  new_iteration[new_dot_idxs, "records_idxs"] .= Array((nrow(records.records)-nrow(new_dots)+1):nrow(records.records))
   records.last_iteration = new_iteration
   records.last_iteration_tree = make_KDTree(model, records.last_iteration)
 

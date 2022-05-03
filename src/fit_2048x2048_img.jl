@@ -67,22 +67,18 @@ end
 function trim_tile_records!(tile_records :: DotRecords, width :: Int64)
     trim_tile_fit!(tile_records.records, width)
     trim_tile_fit!(tile_records.last_iteration, width)
+    return tile_records
 end
 
 function trim_tile_fit!(tile_fit :: DataFrame, width :: Int64)
     ps = tile_fit
-    #if length(ps) == 0
     if nrow(ps) == 0
         return tile_fit
     end
-    #xs = ps[1,:]
-    #ys = ps[2,:]
 
-    #to_keep = (xs .> 2) .| (ys .> 2) .| (xs .< width-2) .| (ys .< width-2)
+
     to_keep = (ps.x .> 2) .| (ps.y .> 2) .| (ps.x .< width-2) .| (ps.y .< width-2)
     return ps[to_keep, :]
-    #ps_trim = ps[:, to_keep]
-    #return ps_trim 
 end
 
 """
@@ -127,7 +123,6 @@ function fit_2048x2048_img_tiles(img,
                                max_cd_iters,
                                noise_mean
                 )
-
 end
 
 """
@@ -192,36 +187,31 @@ function fit_img_tiles(img,
     tile_fits = map(fit_tile, fit_tile_inputs)
 
     #throw out points within 2 pixels of the edge of each tile.
-    #trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
-    #println("tile_fits")
-    #println(tile_fits)
     trimmed_tile_fits = [trim_tile_records!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
     
     #concatenate points
-    ps = []
+
+    final_points, record = tiles_to_img(trimmed_tile_fits, coords)
+
+
+    return final_points[:,1:4], record
+end
+
+function tiles_to_img(trimmed_tile_fits, coords)
+    ps_final = [trimmed_tile_fits[1].last_iteration[1:0, :]]
+    ps_records = [trimmed_tile_fits[1].records[1:0, :]]
     for i = 1:length(trimmed_tile_fits)
         p = trimmed_tile_fits[i]
-        #if length(p) > 0
-        if nrow(p) > 0
-            #p[1,:] .+= coords[i][3] .- 1
-            #p[2,:] .+= coords[i][1] .- 1
-            p[:,"x"] .+= coords[i][3] .- 1
-            p[:,"y"] .+= coords[i][1] .- 1
-            push!(ps, p)
+        if nrow(p.last_iteration) > 0
+            p.last_iteration[:,"x"] .+= coords[i][3] .- 1
+            p.last_iteration[:,"y"] .+= coords[i][1] .- 1
+            p.records[:,"x"] .+= coords[i][3] .- 1
+            p.records[:,"y"] .+= coords[i][1] .- 1
+            push!(ps_final, p.last_iteration)
+            push!(ps_records, p.records)
         end
     end
-
-    #ps = hcat(ps...)
-    ps = vcat(ps...)
-
-    #if length(ps) > 0
-    #    points_df = DataFrame(ps', [:x, :y, :s, :w])
-    #else
-    #    points_df = DataFrame(x=Float64[],y=Float64[],s=Float64[],w=Float64[])
-    #end
-
-    return ps
-    #return points_df
+    return vcat(ps_final...), vcat(ps_records...)
 end
 
 """

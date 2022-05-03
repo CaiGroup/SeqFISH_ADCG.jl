@@ -45,7 +45,6 @@ function test_fit_mult_ps(ps :: Matrix)
     inputs = (test_img, sigma_lb, sigma_ub, 0.0, 0.0, final_loss_improvement, min_weight, max_iters, max_cd_iters)
     points = SeqFISH_ADCG.fit_tile(inputs)
 
-
     sorted_results = sortslices(Matrix(points.last_iteration[:,1:4])', dims=2)
     sorted_ps = sortslices(ps, dims=2)
 

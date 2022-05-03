@@ -22,7 +22,7 @@ test_img = reshape(phi(gblur, p_true), 2048, 2048)
 
 test_blank = zeros(2048, 2048)
 
-res = fit_2048x2048_img_tiles(test_img,
+res_final, res_records = fit_2048x2048_img_tiles(test_img,
                            sigma_lb :: Float64,
                            sigma_ub :: Float64,
                            tau :: Float64,
@@ -33,16 +33,17 @@ res = fit_2048x2048_img_tiles(test_img,
                            noise_mean :: Float64
         )
 
-blank_res = fit_2048x2048_img_tiles(
-                            test_blank,
-                            sigma_lb :: Float64,
-                            sigma_ub :: Float64,
-                            tau :: Float64,
-                            final_loss_improvement :: Float64,
-                            min_weight :: Float64,
-                            max_iters :: Int64,
-                            max_cd_iters :: Int64,
-                            noise_mean :: Float64
+blank_res_final, blank_res_records = fit_2048x2048_img_tiles(
+                                        test_blank,
+                                        sigma_lb :: Float64,
+                                        sigma_ub :: Float64,
+                                        tau :: Float64,
+                                        final_loss_improvement :: Float64,
+                                        min_weight :: Float64,
+                                        max_iters :: Int64,
+                                        max_cd_iters :: Int64,
+                                        noise_mean :: Float64
 )
-@test all(Array(isapprox.(res, p_true', atol= 0.1)))
-@test (0, 4) == size(blank_res)
+println("blank_res_final: $blank_res_final")
+@test all(Array(isapprox.(Matrix(res_final), p_true', atol= 0.1)))
+@test (0, 4) == size(blank_res_final)
