@@ -40,7 +40,7 @@ function fit_tile(inputs)
 
     sum_target = sum(target)
     if sum_target == 0
-        return []
+        return initialize_dot_records(gb_sim, [[] []]) #[]
     end
 
     #tau = sum(target[target .> 0])/final_loss_improvement + 1.0#/5.0 + 1.0
@@ -64,14 +64,15 @@ function fit_tile(inputs)
     return records
 end
 
-function trim_tile_records!(tile_records, width)
+function trim_tile_records!(tile_records :: DotRecords, width :: Int64)
     trim_tile_fit!(tile_records.records, width)
     trim_tile_fit!(tile_records.last_iteration, width)
 end
 
-function trim_tile_fit!(tile_fit, width)
+function trim_tile_fit!(tile_fit :: DataFrame, width :: Int64)
     ps = tile_fit
-    if length(ps) == 0
+    #if length(ps) == 0
+    if nrow(ps) == 0
         return tile_fit
     end
     #xs = ps[1,:]
@@ -192,29 +193,35 @@ function fit_img_tiles(img,
 
     #throw out points within 2 pixels of the edge of each tile.
     #trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
+    #println("tile_fits")
+    #println(tile_fits)
     trimmed_tile_fits = [trim_tile_records!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
     
     #concatenate points
     ps = []
     for i = 1:length(trimmed_tile_fits)
         p = trimmed_tile_fits[i]
-        if length(p) > 0
-            p[1,:] .+= coords[i][3] .- 1
-            p[2,:] .+= coords[i][1] .- 1
+        #if length(p) > 0
+        if nrow(p) > 0
+            #p[1,:] .+= coords[i][3] .- 1
+            #p[2,:] .+= coords[i][1] .- 1
+            p[:,"x"] .+= coords[i][3] .- 1
+            p[:,"y"] .+= coords[i][1] .- 1
             push!(ps, p)
         end
     end
 
-    ps = hcat(ps...)
+    #ps = hcat(ps...)
+    ps = vcat(ps...)
 
-    if length(ps) > 0
-        points_df = DataFrame(ps', [:x, :y, :s, :w])
-    else
-        points_df = DataFrame(x=Float64[],y=Float64[],s=Float64[],w=Float64[])
-    end
+    #if length(ps) > 0
+    #    points_df = DataFrame(ps', [:x, :y, :s, :w])
+    #else
+    #    points_df = DataFrame(x=Float64[],y=Float64[],s=Float64[],w=Float64[])
+    #end
 
-
-    return points_df
+    return ps
+    #return points_df
 end
 
 """

@@ -46,7 +46,7 @@ function test_fit_mult_ps(ps :: Matrix)
     points = SeqFISH_ADCG.fit_tile(inputs)
 
 
-    sorted_results = sortslices(points, dims=2)
+    sorted_results = sortslices(Matrix(points.last_iteration[:,1:4])', dims=2)
     sorted_ps = sortslices(ps, dims=2)
 
     @test all(isapprox.(sorted_ps, sorted_results, atol = 0.05))
