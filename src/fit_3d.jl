@@ -108,6 +108,7 @@ function fit_stack_tiles(img_stack,
         if length(p) > 0
             p[1,:] .+= coords[i][3]
             p[2,:] .+= coords[i][1]
+            p[3,:] .+= coords[i][5]
             push!(ps, p)#trimmed_tile_fits[i][1])
         end
     end

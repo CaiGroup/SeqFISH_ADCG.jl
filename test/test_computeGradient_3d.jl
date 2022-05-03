@@ -60,7 +60,7 @@ function empGrad(img, _trial_point, Δ)
     [ΔlossΔx₁, ΔlossΔx₂, ΔlossΔx₃, ΔlossΔσxy, ΔlossΔσz, ΔlossΔw]
 end
 
-Δ = 0.01
+Δ = 0.0001
 
 #println("gradient: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
 #println("empGrad: ", empGrad(test_img, [16.0, 16.0, 1.0], 1.0, Δ))
