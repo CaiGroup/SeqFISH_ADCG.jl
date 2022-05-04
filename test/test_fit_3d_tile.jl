@@ -34,6 +34,8 @@ max_iters = 200
 max_cd_iters = 100
 
 inputs = (test_stack, sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters)
-results = SeqFISH_ADCG.fit_stack(inputs)
+records = SeqFISH_ADCG.fit_stack(inputs)
 
-@test all(isapprox(sort.([p_true[1:3,:], results[1:3,:]],dims=2)...,atol=0.05))
+sorted_results = sortslices(Matrix(records.last_iteration[:,1:6])', dims=2)
+
+@test all(isapprox(sort.([p_true[1:3,:], sorted_results[1:3,:]],dims=2)...,atol=0.05))

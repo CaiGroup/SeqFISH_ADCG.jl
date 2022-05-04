@@ -255,3 +255,59 @@ function lmo(model :: GaussBlur3D, r :: Vector{Float64})
   end
   return (optx, optf)
 end
+
+make_KDTree(model :: GaussBlur3D, pnts :: DataFrame) = KDTree(Array([pnts.x pnts.y pnts.z]'))
+
+
+function initialize_dot_records(model :: GaussBlur3D, initial_ps :: Matrix)
+  initial_ps 
+  if length(initial_ps) > 0
+    tree = KDTree(initial_ps[1:2,:])
+    initial_ps_df = DataFrame(initial_ps', [:x, :y, :z, :sxy, :sz, :w])
+    records = copy(initial_ps_df)
+    records.highest_mw = [initial_ps_df.w]
+    records.lowest_mw = [initial_ps_df.w]
+    last_iter = copy(initial_ps_df)
+    last_iter.records_idxs = [1]
+  else 
+    records = DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[],highest_mw=[],lowest_mw=[])
+    last_iter = DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[],records_idxs=[])
+    tree = KDTree([Inf; Inf; Inf])
+  end  
+  return DotRecords(records, last_iter, tree)
+end
+
+function update_records!(model :: GaussBlur3D, records :: DotRecords, new_iteration :: Matrix, ϵ :: Float64)
+
+  # search for matches from last iteration
+  idxs, dists = knn(records.last_iteration_tree, new_iteration[1:3, :], 1)
+  dists = getindex.(dists,1)
+  idxs = getindex.(idxs,1)
+  matched_idxs = idxs[dists .<= ϵ]
+  new_dot_idxs = idxs[dists .> ϵ]
+
+  # update records
+  mw = minimum(new_iteration[6,:])
+  new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :z, :sxy, :sz, :w]) : DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[])
+  
+  if length(matched_idxs) > 0
+    matched_dot_record_idxs = records.last_iteration.records_idxs[matched_idxs]
+    records.records[filter(i -> i !=0, matched_dot_record_idxs), "lowest_mw"] .= mw
+  end
+  
+  new_dots = new_iteration[new_dot_idxs,:]
+  new_dots[!, "lowest_mw"] .= mw
+  new_dots[!, "highest_mw"] .= mw
+  records.records = vcat(records.records, new_dots)
+
+  #update last iteration
+  new_iteration[!, "records_idxs"] .= 0
+  if length(matched_idxs) > 0    
+    new_iteration[matched_idxs, "records_idxs"] .= matched_dot_record_idxs
+  end
+  new_iteration[new_dot_idxs, "records_idxs"] .= Array((nrow(records.records)-nrow(new_dots)+1):nrow(records.records))
+  records.last_iteration = new_iteration
+  records.last_iteration_tree = make_KDTree(model, records.last_iteration)
+
+  return records
+end
