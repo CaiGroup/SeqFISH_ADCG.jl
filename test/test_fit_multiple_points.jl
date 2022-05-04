@@ -1,6 +1,7 @@
 using LinearAlgebra
 using SeqFISH_ADCG
 using Test
+using DataFrames
 
 
 sigma_lb = 1.5
@@ -43,12 +44,20 @@ function test_fit_mult_ps(ps :: Matrix)
     test_img = reshape(test_img, width, width)
 
     inputs = (test_img, sigma_lb, sigma_ub, 0.0, 0.0, final_loss_improvement, min_weight, max_iters, max_cd_iters)
-    points = SeqFISH_ADCG.fit_tile(inputs)
+    records = SeqFISH_ADCG.fit_tile(inputs)
 
-    sorted_results = sortslices(Matrix(points.last_iteration[:,1:4])', dims=2)
+    sorted_results = sortslices(Matrix(records.last_iteration[:,1:4])', dims=2)
     sorted_ps = sortslices(ps, dims=2)
 
     @test all(isapprox.(sorted_ps, sorted_results, atol = 0.05))
+
+    #test records
+    for w in records.records.w
+        inputs = (test_img, sigma_lb, sigma_ub, 0.0, 0.0, final_loss_improvement, w, max_iters, max_cd_iters)
+        new_records = SeqFISH_ADCG.fit_tile(inputs)
+        new_results = new_records.last_iteration[:, Not(:records_idxs)]
+        @test all(Matrix(new_results[:,:]) .== Matrix(get_mw_dots(records.records, w)[:,:]))
+    end
 end
 
 @testset "Test Fit Multiple Points" begin

@@ -58,9 +58,7 @@ function fit_tile(inputs)
       end
       return false
     end
-    #points = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
     records = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
-    #return points
     return records
 end
 
