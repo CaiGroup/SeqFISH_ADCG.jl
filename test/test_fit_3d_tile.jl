@@ -4,7 +4,7 @@ using Test
 
 
 sigma_xy_lb = 1.5
-sigma_xy_ub = 1.7# 1.5
+sigma_xy_ub = 1.7
 sigma_z_lb = 0.9
 sigma_z_ub = 1.1
 
@@ -17,8 +17,6 @@ p_true = [14.33 8.6 4.2;
           1.7 1.6 1.65;
           1.1 1.0 0.9;
           1.0 2.0 1.4]
-
-#w_true = [1.0, 2.0, 1.4]
 
 gblur = GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, width, n_slices)
 
@@ -39,3 +37,4 @@ records = SeqFISH_ADCG.fit_stack(inputs)
 sorted_results = sortslices(Matrix(records.last_iteration[:,1:6])', dims=2)
 
 @test all(isapprox(sort.([p_true[1:3,:], sorted_results[1:3,:]],dims=2)...,atol=0.05))
+#@test all(isapprox(sort.([p_true, sorted_results],dims=2)...,atol=0.1))

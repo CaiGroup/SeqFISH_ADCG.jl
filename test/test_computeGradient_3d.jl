@@ -51,12 +51,12 @@ function empGrad(img, _trial_point, Δ)
     [ΔlossΔx₁, ΔlossΔx₂, ΔlossΔx₃, ΔlossΔσxy, ΔlossΔσz, ΔlossΔw]
 end
 
-Δ = 0.001
+Δ = 0.0000001
 
-function test_point(tpoint)
+function test_point(tpoint, atol = 0.001)
     tg = trial_gradient(test_img, tpoint)
     eg = empGrad(test_img, tpoint, Δ)
-    @test isapprox(tg, eg, atol = 0.001)
+    @test isapprox(tg, eg, atol = atol)
 end
 
 @test all(trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]) .== 0)
@@ -66,3 +66,10 @@ test_point([16.0, 16.0, 7.0, 1.4, 4.0, 1.0])
 test_point([16.0, 15.0, 7.0, 1.4, 1.1, 1.0])
 test_point([15.0, 16.0, 7.0, 1.4, 1.1, 1.0])
 test_point([16.0, 16.0, 7.0, 1.4, 1.1, 1.0])
+
+@testset "Compute Gradient 3D random points" begin
+    for i = 1:1000
+        p = rand(6) .* [2.0, 2.0, 6.0, 1.0, 1.0, 1.0] .+ [14.0, 14.0, 6.0, 1.4, 1.1, 1.0]
+        test_point(p,0.3)
+    end
+end
