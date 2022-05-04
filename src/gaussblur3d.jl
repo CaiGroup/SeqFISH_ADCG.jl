@@ -128,17 +128,17 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
     for k = 1:model.n_slices
       fz = exp(-(k-x₃ₗ)^2/(2 * σzₗ^2))
 
-      ∂loss∂x₁ₗ = - wₗ * fz *(f_x2' * r[:,:,k] * fpx1)/(σₓₗ^2)
-      ∂loss∂x₂ₗ = - wₗ * fz * (fpx2' * r[:,:,k] * f_x1)/(σₓₗ^2)
-      ∂loss∂σₓₗ = - wₗ * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(σₓₗ^3)
-      ∂loss∂x₃ₗ = - wₗ * (k - x₃ₗ) * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^2)
-      ∂loss∂σzₗ = - wₗ * (k - x₃ₗ)^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(σzₗ^3)
-      ∂loss∂wₗ = - fz* (f_x2' * r[:,:,k] * f_x1)
+      ∂loss∂x₁ₗ = - 2 * wₗ * fz *(f_x2' * r[:,:,k] * fpx1)/(σₓₗ^2)
+      ∂loss∂x₂ₗ = - 2 * wₗ * fz * (fpx2' * r[:,:,k] * f_x1)/(σₓₗ^2)
+      ∂loss∂σₓₗ = - 2* wₗ * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(σₓₗ^3)
+      ∂loss∂x₃ₗ = - 2 * wₗ * (k - x₃ₗ) * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^2)
+      ∂loss∂σzₗ = - 2 * wₗ * (k - x₃ₗ)^2 * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^3)
+      ∂loss∂wₗ = - 2 * fz* (f_x2' * r[:,:,k] * f_x1)
 
       k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₗ]
     end
     #gradient[:, l] = [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂σₗ]
-    gradient[:, l] = k_sums ./ model.n_slices
+    gradient[:, l] = k_sums #./ model.n_slices
   end
   return gradient
 end
