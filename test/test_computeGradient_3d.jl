@@ -9,24 +9,15 @@ sigma_z_ub = 2.0
 width = 32
 n_slices = 15
 
-#p_true = Matrix([16.0 16.0 7.0 1.4 1.1;]')
-#w_true = [1.0]
 p_true = Matrix([16.0 16.0 7.0 1.4 1.1 1.0;]')
-
-#p_trial = [16.0 16.0 7.0 1.0 1.0]
-#w_trial = [1.0]
 
 p_trial = [16.0 16.0 7.0 1.0 1.0 1.0]
 
 
-#gblur = GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, width, 2width, n_slices)
 gblur = SeqFISH_ADCG.GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, width, n_slices)
 
-#GaussBlur3D(sigma_xy_lb, sigma_xy_ub, width, width*2)
 
-test_img = phi(gblur, p_true) #.+ rand(32,32,15)/1000#rand(1024)./1000
-
-#SparseInverseProblems.
+test_img = phi(gblur, p_true)
 
 function resids(img, ps)
     trial_output = phi(gblur, ps)
@@ -60,35 +51,18 @@ function empGrad(img, _trial_point, Δ)
     [ΔlossΔx₁, ΔlossΔx₂, ΔlossΔx₃, ΔlossΔσxy, ΔlossΔσz, ΔlossΔw]
 end
 
-Δ = 0.0001
+Δ = 0.001
 
-#println("gradient: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
-#println("empGrad: ", empGrad(test_img, [16.0, 16.0, 1.0], 1.0, Δ))
-#println()
+function test_point(tpoint)
+    tg = trial_gradient(test_img, tpoint)
+    eg = empGrad(test_img, tpoint, Δ)
+    @test isapprox(tg, eg, atol = 0.001)
+end
 
 @test all(trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]) .== 0)
 
-println("grad: ", trial_gradient(test_img, [14.0, 18.0, 7.0, 1.4, 1.1, 1.0]))
-t1 = trial_gradient(test_img, [14.0, 18.0, 7.0, 1.4, 1.1, 1.0])
-@test t1[1] < -0.01
-@test t1[2] > 0.01
-@test isapprox(t1[3],0,atol=0.01) 
-println("empGrad: ", empGrad(test_img, [14.0, 18.0, 1.0,1.4, 1.1, 1.0], Δ))
-
-
-println()
-println("grad: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 4.0, 1.0]))
-println("empGrad: ", empGrad(test_img, [16.0, 16.0, 7.0, 1.4, 4.0, 1.0], Δ))
-
-println()
-println("grad: ", trial_gradient(test_img, [16.0, 15.0, 7.0, 1.4, 1.1, 1.0]))
-println("empGrad: ", empGrad(test_img, [16.0, 15.0, 7.0, 1.4, 1.1, 1.0], Δ))
-
-println()
-println("grad: ", trial_gradient(test_img, [15.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
-println("empGrad: ", empGrad(test_img, [15.0, 16.0, 7.0, 1.4, 1.1, 1.0], Δ))
-
-
-println()
-println("grad: ", trial_gradient(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0]))
-println("empGrad: ", empGrad(test_img, [16.0, 16.0, 7.0, 1.4, 1.1, 1.0], Δ))
+test_point([14.0, 18.0, 7.0, 1.4, 1.1, 1.0])
+test_point([16.0, 16.0, 7.0, 1.4, 4.0, 1.0])
+test_point([16.0, 15.0, 7.0, 1.4, 1.1, 1.0])
+test_point([15.0, 16.0, 7.0, 1.4, 1.1, 1.0])
+test_point([16.0, 16.0, 7.0, 1.4, 1.1, 1.0])

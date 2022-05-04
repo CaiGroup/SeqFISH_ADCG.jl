@@ -137,8 +137,7 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
 
       k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₗ]
     end
-    #gradient[:, l] = [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂σₗ]
-    gradient[:, l] = k_sums #./ model.n_slices
+    gradient[:, l] = k_sums
   end
   return gradient
 end
