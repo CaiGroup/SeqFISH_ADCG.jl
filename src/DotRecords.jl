@@ -16,7 +16,7 @@ Look up the ADCG result at a minimum weight larger than the final minimum weight
 Returns a dataframe of results.
 """
 function get_mw_dots(records :: DataFrame, w :: Real)
-    results = filter(d -> d.lowest_mw <= w && d.highest_mw >= w, records)
+    results = filter(d -> d.lowest_mw < w && d.highest_mw >= w, records)
     results = results[:, 1:(ncol(results)-2)]
     return results
 end

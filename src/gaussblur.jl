@@ -3,6 +3,7 @@ export GaussBlur, GaussBlur2D
 using LinearAlgebra
 using GLM
 using DataFrames
+#using Debugger
 
 abstract type GaussBlur <: BoxConstrainedDifferentiableModel end
 
@@ -280,25 +281,33 @@ function initialize_dot_records(model :: GaussBlur, initial_ps :: Matrix)
 end
 
 function update_records!(model :: GaussBlur, records :: DotRecords, new_iteration :: Matrix, ϵ :: Float64)
-
+  #@bp
   # search for matches from last iteration
   idxs, dists = knn(records.last_iteration_tree, new_iteration[1:2, :], 1)
   dists = getindex.(dists,1)
+
+
+  idxs_new = Array(1:size(new_iteration)[2])
+  #@bp
+  matched_idxs = idxs_new[dists .<= ϵ]
+  new_dot_idxs = idxs_new[dists .> ϵ]
+
   idxs = getindex.(idxs,1)
-  matched_idxs = idxs[dists .<= ϵ]
-  new_dot_idxs = idxs[dists .> ϵ]
+  old_matched_idxs = idxs[dists .<= ϵ]
+  old_unmatched_idxs = filter(i -> i ∉ old_matched_idxs, Array(1:nrow(records.last_iteration)))
+  unmatched_records = records.last_iteration.records_idxs[old_unmatched_idxs]
 
   # update records
   mw = minimum(new_iteration[4,:])
   new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :s, :w]) : DataFrame(x=[],y=[],s=[],w=[])
+  records.records[unmatched_records, "lowest_mw"] .= mw
   
   if length(matched_idxs) > 0
     matched_dot_record_idxs = records.last_iteration.records_idxs[matched_idxs]
-    records.records[filter(i -> i !=0, matched_dot_record_idxs), "lowest_mw"] .= mw
   end
   
   new_dots = new_iteration[new_dot_idxs,:]
-  new_dots[!, "lowest_mw"] .= mw
+  new_dots[!, "lowest_mw"] .= 0
   new_dots[!, "highest_mw"] .= mw
   records.records = vcat(records.records, new_dots)
 
