@@ -282,16 +282,25 @@ function update_records!(model :: GaussBlur3D, records :: DotRecords, new_iterat
   idxs, dists = knn(records.last_iteration_tree, new_iteration[1:3, :], 1)
   dists = getindex.(dists,1)
   idxs = getindex.(idxs,1)
-  matched_idxs = idxs[dists .<= ϵ]
-  new_dot_idxs = idxs[dists .> ϵ]
+
+  idxs_new = Array(1:size(new_iteration)[2])
+
+  matched_idxs = idxs_new[dists .<= ϵ]
+  new_dot_idxs = idxs_new[dists .> ϵ]
+
+  old_matched_idxs = idxs[dists .<= ϵ]
+  old_unmatched_idxs = filter(i -> i ∉ old_matched_idxs, Array(1:nrow(records.last_iteration)))
+  unmatched_records = records.last_iteration.records_idxs[old_unmatched_idxs]
 
   # update records
   mw = minimum(new_iteration[6,:])
   new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :z, :sxy, :sz, :w]) : DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[])
-  
+  #println("records: ")
+  #println(records.records)
+  records.records[unmatched_records, "lowest_mw"] .= mw
+
   if length(matched_idxs) > 0
-    matched_dot_record_idxs = records.last_iteration.records_idxs[matched_idxs]
-    records.records[filter(i -> i !=0, matched_dot_record_idxs), "lowest_mw"] .= mw
+    matched_dot_record_idxs = records.last_iteration.records_idxs[old_matched_idxs]
   end
   
   new_dots = new_iteration[new_dot_idxs,:]

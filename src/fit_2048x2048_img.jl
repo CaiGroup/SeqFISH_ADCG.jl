@@ -192,7 +192,7 @@ function fit_img_tiles(img,
     final_points, record = tiles_to_img(trimmed_tile_fits, coords)
 
 
-    return final_points[:,1:4], record
+    return (final_points[:,1:4], record)
 end
 
 function tiles_to_img(trimmed_tile_fits, coords)
@@ -241,7 +241,7 @@ function remove_duplicates(points :: DataFrame,
     end
     ps = Matrix(hcat(points[!, "x"], points[!, "y"], points[!, "s"], points[!, "w"])')
     while true
-        ps_new = remove_duplicates(ps, img, sigma_lb, sigma_ub, tau, noise_mean, min_allowed_separation, dims)
+        ps_new = _remove_duplicates(ps, img, sigma_lb, sigma_ub, tau, noise_mean, min_allowed_separation, dims)
         if prod(size(ps)) == prod(size(ps_new))
             ps = ps_new
             break
@@ -258,7 +258,7 @@ function remove_duplicates(points :: DataFrame,
     return points_df
 end
 
-function remove_duplicates(ps :: Matrix,
+function _remove_duplicates(ps :: Matrix,
                            img,
                            sigma_lb :: Float64,
                            sigma_ub :: Float64,

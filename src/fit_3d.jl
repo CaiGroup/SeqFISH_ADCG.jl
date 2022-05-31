@@ -42,8 +42,8 @@ function fit_stack(inputs)
       end
       return false
     end
-    points = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
-    return points
+    records = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
+    return records
 end
 
 
@@ -97,34 +97,53 @@ function fit_stack_tiles(img_stack,
 
     #throw out points within 2 pixels of the edge of each tile.
     #trimmed_tile_fits = [trim_tile_fit!(tile_fit, img_width + tile_overlap) for tile_fit in tile_fits]
-    trimmed_tile_fits = [trim_tile_fit!(tile_fit, tile_width + tile_overlap) for tile_fit in tile_fits]
+    trimmed_tile_fits = [trim_tile_records!(tile_fit, tile_width + tile_overlap) for tile_fit in tile_fits]
 
     #concatenate points
-    ps = []
+
+    final_points, record = tiles_to_img_stack(trimmed_tile_fits, coords)
+
+
+    return (final_points[:,1:6], record)
+
+    #return points_df
+end
+
+function tiles_to_img_stack(trimmed_tile_fits, coords)
+    ps_final = [trimmed_tile_fits[1].last_iteration[1:0, :]]
+    ps_records = [trimmed_tile_fits[1].records[1:0, :]]
     for i = 1:length(trimmed_tile_fits)
         p = trimmed_tile_fits[i]
 
         #p .*= (tile_width + overhang)
-        if length(p) > 0
-            p[1,:] .+= coords[i][3]
-            p[2,:] .+= coords[i][1]
-            p[3,:] .+= coords[i][5]
-            push!(ps, p)#trimmed_tile_fits[i][1])
+        if nrow(p.last_iteration) > 0
+            p.last_iteration[:,"x"] .+= coords[i][3] .- 1
+            p.last_iteration[:,"y"] .+= coords[i][1] .- 1
+            p.last_iteration[:,"z"] .+= coords[i][5] .- 1
+            p.records[:,"x"] .+= coords[i][3] .- 1
+            p.records[:,"y"] .+= coords[i][1] .- 1
+            p.records[:,"z"] .+= coords[i][5] .- 1
+            push!(ps_final, p.last_iteration)
+            push!(ps_records, p.records)
+
+            #p[1,:] .+= coords[i][3]
+            #p[2,:] .+= coords[i][1]
+            #p[3,:] .+= coords[i][5]
+            #push!(ps, p)#trimmed_tile_fits[i][1])
         end
     end
-    println("length(ps): ", length(ps))
-    ps = hcat(ps...)
-    println("size(ps): ", size(ps))
+    return vcat(ps_final...), vcat(ps_records...)
+    #println("length(ps): ", length(ps))
+    #ps = hcat(ps...)
+    #println("size(ps): ", size(ps))
 
-    points_df = DataFrame()
-    points_df[!, "x"] = ps[1,:]
-    points_df[!, "y"] = ps[2,:]
-    points_df[!, "z"] = ps[3,:]
-    points_df[!, "s_xy"] = ps[4,:]
-    points_df[!, "s_z"] = ps[5,:]
-    points_df[!, "w"] = ps[6,:]
-
-    return points_df
+    #points_df = DataFrame()
+    #points_df[!, "x"] = ps[1,:]
+    #points_df[!, "y"] = ps[2,:]
+    #points_df[!, "z"] = ps[3,:]
+    #points_df[!, "s_xy"] = ps[4,:]
+    #points_df[!, "s_z"] = ps[5,:]
+    #points_df[!, "w"] = ps[6,:]
 end
 
 function remove_duplicates3d(points :: DataFrame,
@@ -136,18 +155,18 @@ function remove_duplicates3d(points :: DataFrame,
     ps = Array(hcat(points[!, "x"],
                    points[!, "y"],
                    points[!,"z"],
-                   points[!, "s_xy"],
-                   points[!, "s_z"],
+                   points[!, "sxy"],
+                   points[!, "sz"],
                    points[!, "w"])')
 
-    ps = remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+    ps = _remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
 
     points_df = DataFrame()
     points_df[!, "x"] = ps[1,:]
     points_df[!, "y"] = ps[2,:]
     points_df[!, "z"] = ps[3,:]
-    points_df[!, "s_xy"] = ps[4,:]
-    points_df[!, "s_z"] = ps[5,:]
+    points_df[!, "sxy"] = ps[4,:]
+    points_df[!, "sz"] = ps[5,:]
     points_df[!, "w"] = ps[6,:]
     return points_df
 end
