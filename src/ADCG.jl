@@ -45,7 +45,7 @@ function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: 
       return dot_record
       #return old_thetas
     end
-    update_records!(sim, dot_record, thetas, match_ϵ)
+    update_records!(sim, dot_record, thetas, match_ϵ, sim.dims)
   end
   println("Hit max iters in frank-wolfe!")
   return dot_record

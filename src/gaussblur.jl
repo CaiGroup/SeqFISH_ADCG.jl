@@ -15,6 +15,7 @@ struct GaussBlur2D <: GaussBlur
   psf_thresh :: Int64
   grid_f
   grid_sigma
+  dims :: Int64
 end
 
 function GaussBlur2D(sigma_lb :: Real, sigma_ub :: Real, np :: Int64)
@@ -22,7 +23,7 @@ function GaussBlur2D(sigma_lb :: Real, sigma_ub :: Real, np :: Int64)
   grid_f = computeFs(Array(0.5:0.5:np),np, ones(2np).*sigma_lb, psf_thresh)
   ng_sigma = ceil(Int64, (sigma_ub - sigma_lb)/0.1) + 1
   grid_sigma = Array(range(sigma_lb, sigma_ub, length = ng_sigma))
-  GaussBlur2D(sigma_lb, sigma_ub, np, 2np, psf_thresh, grid_f, grid_sigma)
+  GaussBlur2D(sigma_lb, sigma_ub, np, 2np, psf_thresh, grid_f, grid_sigma, 2)
 end
 
 function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
@@ -260,7 +261,8 @@ function localDescent_sigma(s :: GaussBlur2D, lossFn :: Loss, thetas ::Matrix{Fl
   return reshape(optx,2, nPoints), optf
 end
 
-make_KDTree(model :: GaussBlur, pnts :: DataFrame) = KDTree(Array([pnts.x pnts.y]'))
+make_KDTree(model :: GaussBlur2D, pnts :: DataFrame) = KDTree(Array([pnts.x pnts.y]'))
+
 
 function initialize_dot_records(model :: GaussBlur, initial_ps :: Matrix)
   initial_ps 
@@ -280,14 +282,17 @@ function initialize_dot_records(model :: GaussBlur, initial_ps :: Matrix)
   return DotRecords(records, last_iter, tree)
 end
 
-function update_records!(model :: GaussBlur, records :: DotRecords, new_iteration :: Matrix, ϵ :: Float64)
+function update_records!(model :: GaussBlur, records :: DotRecords, new_iteration :: Matrix, ϵ :: Float64, dims)
   #@bp
   # search for matches from last iteration
-  idxs, dists = knn(records.last_iteration_tree, new_iteration[1:2, :], 1)
+  #idxs, dists = knn(records.last_iteration_tree, new_iteration[1:2, :], 1)
+  idxs, dists = knn(records.last_iteration_tree, new_iteration[1:dims, :], 1)
+
   dists = getindex.(dists,1)
   idxs = getindex.(idxs,1)
 
-  idxs_new = Array(1:size(new_iteration)[2])
+  nrows, ncols = size(new_iteration)
+  idxs_new = Array(1:ncols)
   #@bp
   matched_idxs = idxs_new[dists .<= ϵ]
   new_dot_idxs = idxs_new[dists .> ϵ]
@@ -297,8 +302,14 @@ function update_records!(model :: GaussBlur, records :: DotRecords, new_iteratio
   unmatched_records = records.last_iteration.records_idxs[old_unmatched_idxs]
 
   # update records
-  mw = minimum(new_iteration[4,:])
-  new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :s, :w]) : DataFrame(x=[],y=[],s=[],w=[])
+  mw = minimum(new_iteration[nrows,:])
+  if dims == 2
+    new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :s, :w]) : DataFrame(x=[],y=[],s=[],w=[])
+  elseif dims == 3
+    new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :z, :sxy, :sz, :w]) : DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[])
+  else
+    error("dims = $dims. Must be either 2 or 3.")
+  end
   records.records[unmatched_records, "lowest_mw"] .= mw
   
   if length(matched_idxs) > 0

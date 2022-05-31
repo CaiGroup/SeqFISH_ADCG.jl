@@ -151,7 +151,10 @@ function remove_duplicates3d(points :: DataFrame,
                            sigma_ub :: Float64,
                            min_allowed_separation :: Float64
                            )
-
+    if nrow(points) == 0
+        return points
+    end
+    
     ps = Array(hcat(points[!, "x"],
                    points[!, "y"],
                    points[!,"z"],
@@ -159,7 +162,15 @@ function remove_duplicates3d(points :: DataFrame,
                    points[!, "sz"],
                    points[!, "w"])')
 
-    ps = _remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+    while true
+        ps_new = _remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 3)
+        if prod(size(ps)) == prod(size(ps_new))
+            ps = ps_new
+            break
+        else
+            ps = ps_new
+        end
+    end
 
     points_df = DataFrame()
     points_df[!, "x"] = ps[1,:]
