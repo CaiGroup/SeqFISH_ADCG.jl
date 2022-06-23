@@ -49,6 +49,11 @@ function test_fit_mult_ps(ps :: Matrix, δw :: Float64 = 0.001)
     sorted_results = sortslices(Matrix(records.last_iteration[:,1:4])', dims=2)
     sorted_ps = sortslices(ps, dims=2)
 
+    println("....")
+    println(sorted_results)
+    println(sorted_ps)
+    println("....")
+
     @test all(isapprox.(sorted_ps, sorted_results, atol = 0.05))
 
     #test records
@@ -56,6 +61,12 @@ function test_fit_mult_ps(ps :: Matrix, δw :: Float64 = 0.001)
         inputs = (test_img, sigma_lb, sigma_ub, 0.0, 0.0, final_loss_improvement, w - δw, max_iters, max_cd_iters)
         new_records = SeqFISH_ADCG.fit_tile(inputs)
         new_results = new_records.last_iteration[:, Not(:records_idxs)]
+
+        println("....")
+        println(Matrix(new_results[:,:]))
+        println(Matrix(get_mw_dots(records.records, w)[:,:]))
+        println("....")
+
         @test all(isapprox.(Matrix(new_results[:,:]), Matrix(get_mw_dots(records.records, w)[:,:]),atol=0.05))
     end
 end
@@ -70,17 +81,17 @@ end
               16.3 12.5;
               1.7 1.6;
               1.0 2.0]
-    test_fit_mult_ps(p_true)
+    #test_fit_mult_ps(p_true)
     p_true = [13.33 10.6;
               15.3 12.5;
               1.7 1.6;
               1.0 2.0]
-    test_fit_mult_ps(p_true, 0.5)
+    #test_fit_mult_ps(p_true, 0.5)
     p_true = [14.33 8.6 17.2;
               16.3 10.5 4.3;
               1.7 1.6 1.8;
               1.0 2.0 1.2]
-    test_fit_mult_ps(p_true)
+    #test_fit_mult_ps(p_true)
 
 end
 
