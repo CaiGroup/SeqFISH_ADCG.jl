@@ -41,11 +41,14 @@ function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: 
     #old_weights = copy(weights)
     thetas = localUpdate(sim,lossFn,thetas,y,tau,max_cd_iters, min_weight)
     output = phi(sim, thetas)
+    update_records!(sim, dot_record, thetas, match_ϵ, sim.dims)
+    #println("record update:")
+    #println(dot_record)
     if callback(old_thetas, thetas, output, objective_value)
+      #println("return from callback")
       return dot_record
       #return old_thetas
     end
-    update_records!(sim, dot_record, thetas, match_ϵ, sim.dims)
   end
   println("Hit max iters in frank-wolfe!")
   return dot_record
@@ -56,10 +59,15 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     thetas :: Matrix{Float64}, y :: Vector{Float64}, tau :: Float64, max_iters, min_weight)
   w_ind = size(thetas)[1]
 
+  #println("thetas start:")
+  #println(thetas)
   close_pnts, far_pnts = get_close_network(sim, thetas)
   all_thetas = thetas
   far_thetas = thetas[:, far_pnts]
   thetas = thetas[:, close_pnts]
+
+  #println("close_pnts:")
+  #println(close_pnts)
 
   y .-= phi(sim, far_thetas)
 
@@ -107,7 +115,11 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     thetas = thetas[:,thetas[w_ind,:] .> min_weight]
   end
 
+  println("thetas:")
+  println(thetas)
+  println("close_pnts: ", close_pnts)
   all_thetas[:, close_pnts] .= thetas
-
+  #println("atr: ")
+  #println(all_thetas)
   return all_thetas #thetas
 end

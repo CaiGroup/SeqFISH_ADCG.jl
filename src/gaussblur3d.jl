@@ -281,16 +281,16 @@ function get_close_network(model :: GaussBlur3D, thetas)
   pnts_mat = Array(thetas[1:3,:])
   ndims, final_pnt_ind = size(pnts_mat)
 
+  thresh = maximum([model.psf_z_thresh, model.gb2d.psf_thresh])
   if final_pnt_ind == 1
     return [1], []
   elseif final_pnt_ind == 2
-    if sqrt(sum((pnts_mat[:,1] - pnts_mat[:,2]).^2)) < model.psf_thresh
+    if sqrt(sum((pnts_mat[:,1] - pnts_mat[:,2]).^2)) < thresh
       return [1,2], []
     else
       return [2], [1]
     end
   else
-    thresh = maximum([model.psf_z_thresh, model.gb2d.psf_thresh])
     dbr = dbscan(pnts_mat, thresh, min_neighbors=1, min_cluster_size=1)
     dbscan_clusters = [sort(vcat(dbc.core_indices,  dbc.boundary_indices)) for dbc in dbr]
     for cluster in dbscan_clusters
