@@ -33,7 +33,7 @@ p_true = [14.33 8.6 4.2;
 w_true = [1.0, 2.0]
 #w_true = [1.0, 2.0, 1.4]
 
-function test_fit_mult_ps(ps :: Matrix)
+function test_fit_mult_ps(ps :: Matrix, δw :: Float64 = 0.001)
 
     gblur = GaussBlur2D(sigma_lb, sigma_ub, width)
 
@@ -53,10 +53,10 @@ function test_fit_mult_ps(ps :: Matrix)
 
     #test records
     for w in records.records.w
-        inputs = (test_img, sigma_lb, sigma_ub, 0.0, 0.0, final_loss_improvement, w, max_iters, max_cd_iters)
+        inputs = (test_img, sigma_lb, sigma_ub, 0.0, 0.0, final_loss_improvement, w - δw, max_iters, max_cd_iters)
         new_records = SeqFISH_ADCG.fit_tile(inputs)
         new_results = new_records.last_iteration[:, Not(:records_idxs)]
-        @test all(Matrix(new_results[:,:]) .== Matrix(get_mw_dots(records.records, w)[:,:]))
+        @test all(isapprox.(Matrix(new_results[:,:]), Matrix(get_mw_dots(records.records, w)[:,:]),atol=0.05))
     end
 end
 
@@ -75,11 +75,11 @@ end
               15.3 12.5;
               1.7 1.6;
               1.0 2.0]
-    test_fit_mult_ps(p_true)
+    test_fit_mult_ps(p_true, 0.5)
     p_true = [14.33 8.6 17.2;
               16.3 10.5 4.3;
               1.7 1.6 1.8;
-              1.0 2.0 1.5]
+              1.0 2.0 1.2]
     test_fit_mult_ps(p_true)
 
 end
