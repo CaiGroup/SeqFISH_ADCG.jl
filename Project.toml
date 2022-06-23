@@ -4,6 +4,7 @@ authors = ["jonat <jawhite@caltech.edu>"]
 version = "0.1.2"
 
 [deps]
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"

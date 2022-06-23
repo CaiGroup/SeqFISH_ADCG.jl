@@ -3,6 +3,7 @@ export GaussBlur, GaussBlur2D
 using LinearAlgebra
 using GLM
 using DataFrames
+using Clustering
 #using Debugger
 
 abstract type GaussBlur <: BoxConstrainedDifferentiableModel end
@@ -331,4 +332,28 @@ function update_records!(model :: GaussBlur, records :: DotRecords, new_iteratio
   records.last_iteration_tree = make_KDTree(model, records.last_iteration)
 
   return records
+end
+
+function get_close_network(model :: GaussBlur2D, thetas)
+  pnts_mat = Array(thetas[1:2,:])
+  ndims, final_pnt_ind = size(pnts_mat)
+
+  if final_pnt_ind == 1
+    return [1], []
+  elseif final_pnt_ind == 2
+    if sqrt(sum((pnts_mat[:,1] - pnts_mat[:,2]).^2)) < model.psf_thresh
+      return [1,2], []
+    else
+      return [2], [1]
+    end
+  else
+    dbr = dbscan(pnts_mat, model.psf_thresh, min_neighbors=1, min_cluster_size=1)
+    dbscan_clusters = [sort(vcat(dbc.core_indices,  dbc.boundary_indices)) for dbc in dbr]
+    for cluster in dbscan_clusters
+      if final_pnt_ind ∈ cluster
+        not_cluster = filter(i -> i ∉ cluster, Array(1:final_pnt_ind))
+        return cluster, not_cluster
+      end
+    end
+  end
 end

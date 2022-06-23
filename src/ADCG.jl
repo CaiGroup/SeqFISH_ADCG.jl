@@ -55,6 +55,14 @@ end
 function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     thetas :: Matrix{Float64}, y :: Vector{Float64}, tau :: Float64, max_iters, min_weight)
   w_ind = size(thetas)[1]
+
+  close_pnts, far_pnts = get_close_network(sim, thetas)
+  all_thetas = thetas
+  far_thetas = thetas[:, far_pnts]
+  thetas = thetas[:, close_pnts]
+
+  y .-= phi(sim, far_thetas)
+
   for cd_iter = 1:max_iters
     old_thetas = thetas
     #remove points that are too close together
@@ -99,5 +107,7 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     thetas = thetas[:,thetas[w_ind,:] .> min_weight]
   end
 
-  return thetas
+  all_thetas[:, close_pnts] .= thetas
+
+  return all_thetas #thetas
 end
