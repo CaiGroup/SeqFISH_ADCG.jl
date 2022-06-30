@@ -62,12 +62,18 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
   #println("thetas start:")
   #println(thetas)
   close_pnts, far_pnts = get_close_network(sim, thetas)
+  if length(close_pnts) == 1
+    #println("close points 1: return")
+    return thetas
+  end
   all_thetas = thetas
   far_thetas = thetas[:, far_pnts]
   thetas = thetas[:, close_pnts]
 
-  #println("close_pnts:")
-  #println(close_pnts)
+  #println("close thetas:")
+  #println(thetas)
+
+  removed_points = []
 
   y .-= phi(sim, far_thetas)
 
@@ -89,8 +95,14 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     end
 
     #remove points with low weight
+    #Need to keep track of this in close network!
     if any(thetas[w_ind,:].<= min_weight)
-      #println("Removing ",sum(thetas[4,:] .<= min_weight), " dim points.")
+      #println("Removing ", close_pnts[thetas[w_ind,:] .<= min_weight], " dim points. min_weight: $min_weight")
+      #println(thetas)
+      #println()
+      
+      removed_points = vcat(removed_points, close_pnts[thetas[w_ind,:] .<= min_weight])
+      close_pnts = close_pnts[thetas[w_ind,:] .> min_weight]
       thetas = thetas[:,thetas[w_ind,:] .> min_weight]
     end
     #local minimization over the support
@@ -109,17 +121,24 @@ function localUpdate(sim :: ForwardModel,lossFn :: Loss,
     thetas = new_thetas
   end
 
+  #println("pre prune thetas:")
+  #println(thetas)
   #final prune
   if any(thetas[w_ind,:].<= min_weight)
     #println("Removing ",sum(thetas[4,:] .<= min_weight), " dim points.")
+    #vcat(removed_points, close_points(thetas[w_ind,:] .<= min_weight))
+    close_pnts = close_pnts[thetas[w_ind,:] .> min_weight]
     thetas = thetas[:,thetas[w_ind,:] .> min_weight]
   end
 
-  println("thetas:")
-  println(thetas)
-  println("close_pnts: ", close_pnts)
+  #println("thetas:")
+  #println(thetas)
+  #println("close_pnts: ", close_pnts)
   all_thetas[:, close_pnts] .= thetas
+  #all_thetas = all_thetas[:, close_pnts] .= thetas
+  remaining_points = sort(vcat(far_pnts, close_pnts))
   #println("atr: ")
   #println(all_thetas)
-  return all_thetas #thetas
+  #println("remaining_points: $remaining_points")
+  return all_thetas[:, remaining_points] #thetas
 end
