@@ -277,6 +277,8 @@ function initialize_dot_records(model :: GaussBlur3D, initial_ps :: Matrix)
   return DotRecords(records, last_iter, tree)
 end
 
+within_thresh(ind1, ind2, pnts_mat, thresh) = sqrt(sum((pnts_mat[:,ind1] - pnts_mat[:,ind2]).^2)) < thresh
+
 function get_close_network(model :: GaussBlur3D, thetas)
   pnts_mat = Array(thetas[1:3,:])
   ndims, final_pnt_ind = size(pnts_mat)
@@ -285,11 +287,26 @@ function get_close_network(model :: GaussBlur3D, thetas)
   if final_pnt_ind == 1
     return [1], []
   elseif final_pnt_ind == 2
-    if sqrt(sum((pnts_mat[:,1] - pnts_mat[:,2]).^2)) < thresh
+    if within_thresh(1, 2, pnts_mat, thresh)
       return [1,2], []
     else
       return [2], [1]
     end
+  elseif final_pnt_ind == 3
+    close_pnts = [3]
+    others = [1,2]
+    if within_thresh(1, 3, pnts_mat, thresh)
+      push!(close_pnts, 1)
+      filter!(x -> x != 1, others)
+    end
+    if within_thresh(2, 3, pnts_mat, thresh)
+      push!(close_pnts, 2)
+      filter!(x -> x != 2, others)
+    end
+    if length(close_pnts) == 2 && within_thresh(1, 2, pnts_mat, thresh)
+      return [1,2,3], []
+    end
+    return sort(close_pnts), others
   else
     dbr = dbscan(pnts_mat, thresh, min_neighbors=1, min_cluster_size=1)
     dbscan_clusters = [sort(vcat(dbc.core_indices,  dbc.boundary_indices)) for dbc in dbr]
