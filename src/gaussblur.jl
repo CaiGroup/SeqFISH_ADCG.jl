@@ -293,6 +293,9 @@ function update_records!(model :: GaussBlur, records :: DotRecords, new_iteratio
   idxs = getindex.(idxs,1)
 
   nrows, ncols = size(new_iteration)
+  if ncols == 0
+    return records
+  end
   idxs_new = Array(1:ncols)
   #@bp
   matched_idxs = idxs_new[dists .<= ϵ]
