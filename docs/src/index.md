@@ -12,22 +12,9 @@ Generally, this package can be used to fit images that are composed of a superpo
 
 The example jupyter notebooks show how to preprocess a SeqFISH image, and then how use the package to fit a model locating the point spread functions.
 
-## Installation
 
-From Julia, install by running the commands:
-
-```
-import Pkg
-Pkg.add(url="https://github.com/CaiLab/SeqFISH_ADCG")
-```
-
-## Example
-
-## API Reference
-
-```@docs
-fit_img_tiles
-fit_2048x2048_img_tiles
-remove_duplicates
-fit_tile
+## Contents
+```@contents
+Pages = ["installation.md", "example_FitDots.md", "api_reference.md"]
+Depth = 3
 ```
