@@ -69,7 +69,7 @@ scatter!(ps[1,:], ps[2,:])
 
 ADCG appears to pick up all of the dots. It may have a few extra, but it better to tune the parameters such that too many dots are picked up than too few because [SeqFISHSyndromeDecoding](https://github.com/CaiGroup/SeqFISHSyndromeDecoding) is very effective at discarding bad dots.
 
-Running ADCG on a whole image requires breaking up the image into overlapping tiles, running ADCG on each tile, and piecing the tiles back together. All of the Cai Lab's microscopes use 2048X2048 cameras, so SeqFISH_ADCG comes with a special function, [`fit_2048x2048_img_tiles`](@ref), that breaks 2048 images up into tiles
+Running ADCG on a whole image requires breaking up the image into overlapping tiles, running ADCG on each tile, and piecing the tiles back together. All of the Cai Lab's microscopes use 2048X2048 cameras, so `SeqFISH_ADCG` comes with a special function, [`fit_2048x2048_img_tiles`](@ref), that breaks 2048 images up into tiles
 
 
 ```julia

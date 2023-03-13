@@ -16,7 +16,7 @@ Arguments:
     - `sigma_lb` : the lowest allowed value of the width parameter of dots.
     - `sigma_ub` : the highest allowed value of the width parameter of dots.
     - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
-    - `tau` :
+    - `tau` : not used in this version
     - `final_loss_improvement` : Terminate ADCG when the objective improves by less than this value in one iteration
     - `min_weight` : The minimum allowed weight of a PSF in the image model
     - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
