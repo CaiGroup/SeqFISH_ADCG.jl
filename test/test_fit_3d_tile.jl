@@ -26,7 +26,7 @@ test_img .+= 0.1*rand(length(test_img))
 
 test_stack = reshape(test_img, width, width, n_slices)
 
-min_weight = 0.5
+min_weight = 0.7
 final_loss_improvement = 0.03
 max_iters = 200
 max_cd_iters = 100
@@ -36,6 +36,7 @@ records = SeqFISH_ADCG.fit_stack(inputs)
 
 sorted_results = sortslices(Matrix(records.last_iteration[:,1:6])', dims=2)
 
-println(sort.([p_true[1:3,:], sorted_results[1:3,:]],dims=2))
+println(sort(p_true[1:3,:],dims=2))
+println(sort(sorted_results[1:3,:],dims=2))
 @test all(isapprox(sort.([p_true[1:3,:], sorted_results[1:3,:]],dims=2)...,atol=0.05))
 #@test all(isapprox(sort.([p_true, sorted_results],dims=2)...,atol=0.1))
