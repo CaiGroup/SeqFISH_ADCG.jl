@@ -37,7 +37,9 @@ function fit_stack(inputs)
     function callback(old_thetas,thetas,output,old_obj_val)
       #evalute current OV
       new_obj_val,t = loss(LSLoss(), output - target)
-      if old_obj_val - new_obj_val < final_loss_improvement
+      w_ind = size(thetas)[1]
+      if any(thetas[end, end] .< min_weight) #old_obj_val - new_obj_val < final_loss_improvement
+        #println("old_obj_val-new_obj_val: ", old_obj_val-new_obj_val)
         return true
       end
       return false
