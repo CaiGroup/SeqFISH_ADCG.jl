@@ -3,6 +3,7 @@ export GaussBlur, GaussBlur2D
 using LinearAlgebra
 using GLM
 using DataFrames
+using ImageMorphology
 #using Debugger
 
 abstract type GaussBlur <: BoxConstrainedDifferentiableModel end
@@ -55,6 +56,75 @@ function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
 
   push!(thetas, opt_s)
   push!(thetas, opt_w)
+  return thetas
+end
+
+
+function getNextPoints(model :: GaussBlur2D, r_vec :: Vector{Float64})
+  r = reshape(r_vec, model.n_pixels, model.n_pixels)
+  ng = model.ng
+  grid_objective_values = model.grid_f'*r*model.grid_f
+  local_maxima_mask = local_maxima(grid_objective_values)
+  next_pnt_coords = findall(local_maxima_mask .!= 0)
+  println(next_pnt_coords)
+  println("sum(local_maxima_mask): ", sum(local_maxima_mask))
+  next_pnts= hcat(collect.(Tuple.(next_pnt_coords))...)
+  thetas = hcat(next_pnts[2, :], next_pnts[1, :])' .*(model.n_pixels/model.ng)
+  #thetas = next_pnts .* (model.n_pixels/model.ng)
+
+
+  ndots = length(next_pnt_coords)
+
+  #println(thetas)
+  #println("ndots: $ndots")
+
+  thetas = vcat(thetas, fill(model.sigma_lb, 1, ndots))
+  thetas = vcat(thetas, ones(1, ndots))
+  #println(thetas)
+
+  
+  #grid sigma, fit weight with least squares, choose best combo
+  opt_w = 0
+  opt_s = model.sigma_lb
+  opt_obj = Inf
+  #for s in range(model.sigma_lb, model.sigma_ub, length=20)
+  psfs = []
+  for i in 1:ndots
+    coords_sigma = reshape(thetas[:,i], 4,1) #reshape([thetas[1] thetas[2] model.sigma_lb 1.0],4,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    push!(psfs, A)
+    #=
+    l_fit = lm(A, r_vec)
+    obj_v = sum(residuals(l_fit).^2)
+    if obj_v < opt_obj
+      opt_s = s
+      opt_w = coef(l_fit)[1]
+      opt_obj = obj_v
+    end
+    =#
+  end
+  X = hcat(psfs...)
+  #println("maximum(r_vec): ", maximum(r_vec))
+  #println("maximum(X): ", maximum(X))
+  #println("maximum(X .- r_vec): ", maximum(X .- r_vec))
+  #println("size(X): ", size(X))
+  #println("size(r_vec): ", size(r_vec))
+  #println(X)
+
+  l_fit = lm(X, r_vec)
+  #println(l_fit)
+  #println(coef(l_fit))
+  for (i, w) in enumerate(coef(l_fit))
+    if w < 0
+      thetas[4,i] = 0
+    else
+      thetas[4,i] = w
+    end
+  end
+  #push!(thetas, opt_s)
+  #push!(thetas, opt_w)
+  
   return thetas
 end
 
