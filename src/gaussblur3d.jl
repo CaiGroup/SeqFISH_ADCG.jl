@@ -80,6 +80,74 @@ function getStartingPoint(model :: GaussBlur3D, r_vec :: Vector{Float64})
   return thetas
 end
 
+
+function getNextPoints(model :: GaussBlur3D, r_vec :: Vector{Float64}, min_weight)
+  r = reshape(r_vec, model.n_pixels, model.n_pixels, model.n_slices)
+  #ng = model.ng
+  z_slice_obj_values = zeros(model.n_pixels*2, model.n_pixels*2, model.n_slices)
+  for z = 1:(model.n_slices)
+    z_slice_obj_values[:,:,z] = model.gb2d.grid_f'*r[:,:,z]*model.gb2d.grid_f
+  end
+
+  grid_objective_values = zeros(model.n_pixels*2, model.n_pixels*2, 2*model.n_slices)
+  for y = 1:(2*model.n_pixels)# n_z_slices
+    grid_objective_values[y,:,:] = z_slice_obj_values[y,:,:]*model.zgrid
+  end
+
+  local_maxima_mask = local_maxima(grid_objective_values) #argmin(grid_objective_values)
+  next_pnt_coords = findall(local_maxima_mask .!= 0)
+  next_pnts= hcat(collect.(Tuple.(next_pnt_coords))...)
+  thetas = hcat(next_pnts[2, :], next_pnts[1, :])' .*(model.n_pixels/model.gb2d.ng)
+  #thetas =  [next_pnts[2], next_pnts[1]].*(model.n_pixels/model.gb2d.ng)
+  thetas = vcat(thetas, next_pnts[3]/2)
+  
+  ndots = length(next_pnt_coords)
+
+  thetas = vcat(thetas, fill(model.gb2d.sigma_lb, 1, ndots))
+  thetas = vcat(thetas, fill(model.sigma_z_lb, 1, ndots))
+  thetas = vcat(thetas, ones(1, ndots))
+
+  opt_w = 0
+  opt_s_xy = model.gb2d.sigma_lb
+  opt_s_z = model.sigma_z_lb
+  opt_obj = Inf
+  psfs = []
+  for i in 1:ndots
+    coords_sigma = reshape(thetas[:,i], 6,1) #reshape([thetas[1] thetas[2] model.sigma_lb 1.0],4,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    push!(psfs, A)
+  end
+  #=
+  for s_xy in range(model.gb2d.sigma_lb, model.gb2d.sigma_ub, length=20), s_z in range(model.sigma_z_lb, model.sigma_z_ub, length=10)
+    coords_sigma = reshape([thetas[1] thetas[2] thetas[3] s_xy s_z 1.0],6,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    l_fit = lm(A, r_vec)
+    obj_v = sum(residuals(l_fit).^2)
+    if obj_v < opt_obj
+      opt_s_xy = s_xy
+      opt_s_z = s_z
+      opt_w = coef(l_fit)[1]
+      opt_obj = obj_v
+    end
+  end=#
+  X = hcat(psfs...)
+  l_fit = lm(X, r_vec)
+  thetas[6,:] .= coef(l_fit)
+  thetas = thetas[:, coef(l_fit) .> min_weight]
+
+  #=
+  if opt_w < 0
+    opt_w = 0
+  end
+  push!(thetas, opt_s_xy)
+  push!(thetas, opt_s_z)
+  push!(thetas, opt_w)
+  =#
+  return thetas
+end
+
 function phi(s :: GaussBlur3D, parameters :: Matrix{Float64})
   canvas = zeros(s.n_pixels, s.n_pixels, s.n_slices)
   for i in 1:size(parameters)[2]

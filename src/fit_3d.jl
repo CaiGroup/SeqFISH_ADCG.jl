@@ -19,7 +19,7 @@ function fit_stack(inputs)
     gb_sim = GaussBlur3D(sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, n_pixels, n_slices)
     #GaussBlur3D(sigma_lb, sigma_ub, n_pixels, grid)
 
-    target = Float64.(vec(stack))#.-noise_mean#*1.5
+    target = Float64.(vec(stack)) #.-noise_mean#*1.5
     target[target .< 0] .= 0
 
     
@@ -42,7 +42,7 @@ function fit_stack(inputs)
       end
       return false
     end
-    records = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
+    records = run_fit(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
     return records
 end
 

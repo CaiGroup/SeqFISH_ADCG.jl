@@ -60,14 +60,14 @@ function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
 end
 
 
-function getNextPoints(model :: GaussBlur2D, r_vec :: Vector{Float64})
+function getNextPoints(model :: GaussBlur2D, r_vec :: Vector{Float64}, min_weight)
   r = reshape(r_vec, model.n_pixels, model.n_pixels)
   ng = model.ng
   grid_objective_values = model.grid_f'*r*model.grid_f
   local_maxima_mask = local_maxima(grid_objective_values)
   next_pnt_coords = findall(local_maxima_mask .!= 0)
-  println(next_pnt_coords)
-  println("sum(local_maxima_mask): ", sum(local_maxima_mask))
+  #println(next_pnt_coords)
+  #println("sum(local_maxima_mask): ", sum(local_maxima_mask))
   next_pnts= hcat(collect.(Tuple.(next_pnt_coords))...)
   thetas = hcat(next_pnts[2, :], next_pnts[1, :])' .*(model.n_pixels/model.ng)
   #thetas = next_pnts .* (model.n_pixels/model.ng)
@@ -115,13 +115,8 @@ function getNextPoints(model :: GaussBlur2D, r_vec :: Vector{Float64})
   l_fit = lm(X, r_vec)
   #println(l_fit)
   #println(coef(l_fit))
-  for (i, w) in enumerate(coef(l_fit))
-    if w < 0
-      thetas[4,i] = 0
-    else
-      thetas[4,i] = w
-    end
-  end
+  thetas[4,:] .= coef(l_fit)
+  thetas = thetas[:, coef(l_fit) .> min_weight]
   #push!(thetas, opt_s)
   #push!(thetas, opt_w)
   

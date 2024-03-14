@@ -23,7 +23,7 @@ Arguments:
     - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
 """
 function fit_tile(inputs)
-    tile, sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters = inputs
+    tile, sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg = inputs
 
     n_pixels = maximum(size(tile))
     if any(size(tile) .< n_pixels)
@@ -58,8 +58,8 @@ function fit_tile(inputs)
       end
       return false
     end
-    records = ADCG(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters)
-    return records
+    
+    return run_fit(gb_sim, LSLoss(), target, tau, min_weight, max_iters=max_iters, callback=callback, max_cd_iters=max_cd_iters,fit_alg=fit_alg)
 end
 
 function trim_tile_records!(tile_records :: DotRecords, width :: Int64)
@@ -112,14 +112,16 @@ function fit_2048x2048_img_tiles(img,
                            min_weight :: Float64,
                            max_iters :: Int64,
                            max_cd_iters :: Int64,
-                           noise_mean :: Float64
+                           noise_mean :: Float64;
+                           fit_alg :: AbstractString = "ADCG"
         )
     @assert size(img) == (2048, 2048)
     fit_img_tiles(img, 64, 6, sigma_lb, sigma_ub, tau, final_loss_improvement,
                                min_weight,
                                max_iters,
                                max_cd_iters,
-                               noise_mean
+                               noise_mean,
+                               fit_alg = fit_alg
                 )
 end
 
@@ -162,7 +164,8 @@ function fit_img_tiles(img,
                        min_weight :: Float64,
                        max_iters :: Int64,
                        max_cd_iters :: Int64,
-                       noise_mean :: Float64
+                       noise_mean :: Float64;
+                       fit_alg :: AbstractString = "ADCG"
         )
 
     img_height, img_width = size(img)
@@ -179,7 +182,7 @@ function fit_img_tiles(img,
     coords = [((bnds_start[i]),bnds_end[i], (bnds_start[j]),bnds_end[j]) for i in 1:tiles_across, j in 1:(tiles_across-1)]
     tiles = [img[cds[1]:cds[2],cds[3]:cds[4]] for cds in coords]
 
-    fit_tile_inputs = [(tiles[i], sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(tiles)]
+    fit_tile_inputs = [(tiles[i], sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg) for i in 1:length(tiles)]
 
     #fit tiles
     tile_fits = map(fit_tile, fit_tile_inputs)
