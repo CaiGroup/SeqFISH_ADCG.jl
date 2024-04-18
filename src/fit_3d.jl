@@ -57,7 +57,8 @@ function fit_stack_tiles(img_stack,
                        final_loss_improvement :: Float64,
                        min_weight :: Float64,
                        max_iters :: Int64,
-                       max_cd_iters :: Int64
+                       max_cd_iters :: Int64,
+                       fit_alg = "ADCG"
                 )
 
     tile_depth = 3
@@ -86,7 +87,7 @@ function fit_stack_tiles(img_stack,
     # define overlapping tiles
     coords = [(bnds_start[i],bnds_end[i], bnds_start[j],bnds_end[j], z_start[k], z_end[k]) for i in 1:tiles_across, j in 1:(tiles_across-1), k in 1:tiles_deep]
     stacks = [img_stack[cds[1]:cds[2], cds[3]:cds[4], cds[5]:cds[6]] for cds in coords]
-    fit_tile_inputs = [(stacks[i], sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(stacks)]
+    fit_tile_inputs = [(stacks[i], sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg) for i in 1:length(stacks)]
     #fit_tile_inputs = [(tiles[i], sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters) for i in 1:length(tiles)]
 
     #fit tiles

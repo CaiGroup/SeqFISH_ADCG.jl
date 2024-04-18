@@ -227,14 +227,21 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
   lb = vec(vcat(x1_lb', x2_lb', x3_lb'))
   ub = vec(vcat(x1_ub', x2_ub', x3_ub'))
 
+  thetas_copy = copy(thetas)
+
   p = size(thetas,1)
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
   function f_and_g!(x,g)
       ps = reshape(x, 3, Int64(length(x)/3))
-      output = phi(su.s,ps)
+      thetas_copy[1:3, :] .= ps
+      #output = phi(su.s,ps)
+      output = phi(su.s,thetas_copy)
       residual = su.y .- output
-      l,v_star = loss(s.lossFn,residual)
-      g[:] = computeGradient(su.s, ps, residual)[1:3]
+      residual = su.y .- output
+      #l,v_star = loss(s.lossFn,residual)
+      #g[:] = computeGradient(su.s, ps, residual)[1:3]
+      l,v_star = loss(su.lossFn,residual)
+      g[:] = computeGradient(su.s, thetas_copy, residual)[1:3]
   end
   opt = Opt(NLopt.LD_MMA, 3*nPoints)
   initializeOptimizer!(s, opt)
