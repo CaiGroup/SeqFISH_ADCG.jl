@@ -241,7 +241,8 @@ function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Fl
       #l,v_star = loss(s.lossFn,residual)
       #g[:] = computeGradient(su.s, ps, residual)[1:3]
       l,v_star = loss(su.lossFn,residual)
-      g[:] = computeGradient(su.s, thetas_copy, residual)[1:3]
+      g[:] = vec(computeGradient(su.s, thetas_copy, residual)[1:3, :])
+      return l
   end
   opt = Opt(NLopt.LD_MMA, 3*nPoints)
   initializeOptimizer!(s, opt)
