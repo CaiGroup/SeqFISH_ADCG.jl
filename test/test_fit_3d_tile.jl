@@ -30,8 +30,9 @@ min_weight = 0.5
 final_loss_improvement = 0.03
 max_iters = 200
 max_cd_iters = 100
+fit_alg="ADCG"
 
-inputs = (test_stack, sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters)
+inputs = (test_stack, sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg)
 records = SeqFISH_ADCG.fit_stack(inputs)
 
 sorted_results = sortslices(Matrix(records.last_iteration[:,1:6])', dims=2)

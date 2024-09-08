@@ -99,7 +99,7 @@ function getNextPoints(model :: GaussBlur3D, r_vec :: Vector{Float64}, min_weigh
   next_pnts= hcat(collect.(Tuple.(next_pnt_coords))...)
   thetas = hcat(next_pnts[2, :], next_pnts[1, :])' .*(model.n_pixels/model.gb2d.ng)
   #thetas =  [next_pnts[2], next_pnts[1]].*(model.n_pixels/model.gb2d.ng)
-  thetas = vcat(thetas, next_pnts[3]/2)
+  thetas = vcat(thetas, next_pnts[3, :]' ./ 2)
   
   ndots = length(next_pnt_coords)
 
@@ -215,14 +215,21 @@ end
 function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})
   lb,ub = parameterBounds(s)
   nPoints = size(thetas,2)
-  im_lb = fill(lb[1], nPoints)
-  im_ub = fill(ub[2], nPoints)
-  x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[1,:] .- s.gb2d.psf_thresh)
-  x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[2,:] .- s.gb2d.psf_thresh)
-  x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[3,:] .- s.psf_z_thresh)
-  x1_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[1,:] .+ s.gb2d.psf_thresh)
-  x2_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[2,:] .+ s.gb2d.psf_thresh)
-  x3_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[3,:] .+ s.psf_z_thresh)
+  im_lb_1 = fill(lb[1], nPoints)
+  im_lb_2 = fill(lb[2], nPoints)
+  im_lb_3 = fill(lb[3], nPoints)
+  im_ub_1 = fill(ub[1], nPoints)
+  im_ub_2 = fill(ub[2], nPoints)
+  im_ub_3 = fill(ub[3], nPoints)
+
+  thetas[1,:]
+
+  x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb_1, thetas[1,:] .- s.gb2d.psf_thresh)
+  x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb_2, thetas[2,:] .- s.gb2d.psf_thresh)
+  x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb_3, thetas[3,:] .- s.psf_z_thresh)
+  x1_ub = broadcast((a, b) -> a < b ? a : b, im_ub_1, thetas[1,:] .+ s.gb2d.psf_thresh)
+  x2_ub = broadcast((a, b) -> a < b ? a : b, im_ub_2, thetas[2,:] .+ s.gb2d.psf_thresh)
+  x3_ub = broadcast((a, b) -> a < b ? a : b, im_ub_3, thetas[3,:] .+ s.psf_z_thresh)
 
   lb = vec(vcat(x1_lb', x2_lb', x3_lb'))
   ub = vec(vcat(x1_ub', x2_ub', x3_ub'))
