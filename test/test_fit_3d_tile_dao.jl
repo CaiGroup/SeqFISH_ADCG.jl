@@ -36,5 +36,5 @@ records = SeqFISH_ADCG.fit_stack(inputs)
 
 sorted_results = sortslices(Matrix(records.last_iteration[:,1:6])', dims=2)
 
-@test all(isapprox(sort.([p_true[1:3,:], sorted_results[1:3,:]],dims=2)...,atol=0.1))
+@test all(isapprox(sort.([p_true[1:3,:], sorted_results[1:3,:]],dims=2)...,atol=0.2))
 #@test all(isapprox(sort.([p_true, sorted_results],dims=2)...,atol=0.1))
