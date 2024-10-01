@@ -2,6 +2,9 @@ export GaussBlur, GaussBlur2D
 
 using LinearAlgebra
 using GLM
+using DataFrames
+using ImageMorphology
+#using Debugger
 
 abstract type GaussBlur <: BoxConstrainedDifferentiableModel end
 
@@ -13,6 +16,7 @@ struct GaussBlur2D <: GaussBlur
   psf_thresh :: Int64
   grid_f
   grid_sigma
+  dims :: Int64
 end
 
 function GaussBlur2D(sigma_lb :: Real, sigma_ub :: Real, np :: Int64)
@@ -20,7 +24,7 @@ function GaussBlur2D(sigma_lb :: Real, sigma_ub :: Real, np :: Int64)
   grid_f = computeFs(Array(0.5:0.5:np),np, ones(2np).*sigma_lb, psf_thresh)
   ng_sigma = ceil(Int64, (sigma_ub - sigma_lb)/0.1) + 1
   grid_sigma = Array(range(sigma_lb, sigma_ub, length = ng_sigma))
-  GaussBlur2D(sigma_lb, sigma_ub, np, 2np, psf_thresh, grid_f, grid_sigma)
+  GaussBlur2D(sigma_lb, sigma_ub, np, 2np, psf_thresh, grid_f, grid_sigma, 2)
 end
 
 function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
@@ -52,6 +56,70 @@ function getStartingPoint(model :: GaussBlur2D, r_vec :: Vector{Float64})
 
   push!(thetas, opt_s)
   push!(thetas, opt_w)
+  return thetas
+end
+
+
+function getNextPoints(model :: GaussBlur2D, r_vec :: Vector{Float64}, min_weight)
+  r = reshape(r_vec, model.n_pixels, model.n_pixels)
+  ng = model.ng
+  grid_objective_values = model.grid_f'*r*model.grid_f
+  local_maxima_mask = local_maxima(grid_objective_values)
+  next_pnt_coords = findall(local_maxima_mask .!= 0)
+  #println(next_pnt_coords)
+  #println("sum(local_maxima_mask): ", sum(local_maxima_mask))
+  next_pnts= hcat(collect.(Tuple.(next_pnt_coords))...)
+  thetas = hcat(next_pnts[2, :], next_pnts[1, :])' .*(model.n_pixels/model.ng)
+  #thetas = next_pnts .* (model.n_pixels/model.ng)
+
+
+  ndots = length(next_pnt_coords)
+
+  #println(thetas)
+  #println("ndots: $ndots")
+
+  thetas = vcat(thetas, fill(model.sigma_lb, 1, ndots))
+  thetas = vcat(thetas, ones(1, ndots))
+  #println(thetas)
+
+  
+  #grid sigma, fit weight with least squares, choose best combo
+  opt_w = 0
+  opt_s = model.sigma_lb
+  opt_obj = Inf
+  #for s in range(model.sigma_lb, model.sigma_ub, length=20)
+  psfs = []
+  for i in 1:ndots
+    coords_sigma = reshape(thetas[:,i], 4,1) #reshape([thetas[1] thetas[2] model.sigma_lb 1.0],4,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    push!(psfs, A)
+    #=
+    l_fit = lm(A, r_vec)
+    obj_v = sum(residuals(l_fit).^2)
+    if obj_v < opt_obj
+      opt_s = s
+      opt_w = coef(l_fit)[1]
+      opt_obj = obj_v
+    end
+    =#
+  end
+  X = hcat(psfs...)
+  #println("maximum(r_vec): ", maximum(r_vec))
+  #println("maximum(X): ", maximum(X))
+  #println("maximum(X .- r_vec): ", maximum(X .- r_vec))
+  #println("size(X): ", size(X))
+  #println("size(r_vec): ", size(r_vec))
+  #println(X)
+
+  l_fit = lm(X, r_vec)
+  #println(l_fit)
+  #println(coef(l_fit))
+  thetas[4,:] .= coef(l_fit)
+  thetas = thetas[:, coef(l_fit) .> min_weight]
+  #push!(thetas, opt_s)
+  #push!(thetas, opt_w)
+  
   return thetas
 end
 
@@ -160,29 +228,6 @@ function phi(s :: GaussBlur2D, parameters :: Matrix{Float64})
   return vec(v_y*v_x')
 end
 
-"""
-function solveFiniteDimProblem(model :: GaussBlur, thetas, y, tau)
-  nthetas = size(thetas)[2]
-  nparams = size(thetas)[1]
-  if nthetas == 0
-    return Float64[]
-  end
-
-  if nparams == 3
-    A = zeros(model.n_pixels^2, nthetas)
-  elseif nparams == 5
-    A = zeros(model.n_slices*model.n_pixels^2, nthetas)
-  end
-
-  for i = 1:nthetas
-    A[:, i] = vec(phi(model, reshape(thetas[:,i], nparams, 1)))
-  end
-
-  results = lm(A, y)
-  return coef(results)
-end
-"""
-
 function lmo(model :: GaussBlur2D, r :: Vector{Float64})
   lb_0,ub_0 = parameterBounds(model)
   initial_x = getStartingPoint(model, r)
@@ -279,4 +324,76 @@ function localDescent_sigma(s :: GaussBlur2D, lossFn :: Loss, thetas ::Matrix{Fl
   end
 
   return reshape(optx,2, nPoints), optf
+end
+
+make_KDTree(model :: GaussBlur2D, pnts :: DataFrame) = KDTree(Array([pnts.x pnts.y]'))
+
+
+function initialize_dot_records(model :: GaussBlur, initial_ps :: Matrix)
+  initial_ps 
+  if length(initial_ps) > 0
+    tree = KDTree(initial_ps[1:2,:])
+    initial_ps_df = DataFrame(initial_ps', [:x, :y, :s, :w])
+    records = copy(initial_ps_df)
+    records.highest_mw = [initial_ps_df.w]
+    records.lowest_mw = [initial_ps_df.w]
+    last_iter = copy(initial_ps_df)
+    last_iter.records_idxs = [1]
+  else 
+    records = DataFrame(x=[],y=[],s=[],w=[],highest_mw=[],lowest_mw=[])
+    last_iter = DataFrame(x=[],y=[],s=[],w=[], records_idxs=[])
+    tree = KDTree([Inf; Inf])
+  end  
+  return DotRecords(records, last_iter, tree)
+end
+
+function update_records!(model :: GaussBlur, records :: DotRecords, new_iteration :: Matrix, ϵ :: Float64, dims)
+  #@bp
+  # search for matches from last iteration
+  #idxs, dists = knn(records.last_iteration_tree, new_iteration[1:2, :], 1)
+  idxs, dists = knn(records.last_iteration_tree, new_iteration[1:dims, :], 1)
+
+  dists = getindex.(dists,1)
+  idxs = getindex.(idxs,1)
+
+  nrows, ncols = size(new_iteration)
+  idxs_new = Array(1:ncols)
+  #@bp
+  matched_idxs = idxs_new[dists .<= ϵ]
+  new_dot_idxs = idxs_new[dists .> ϵ]
+
+  old_matched_idxs = idxs[dists .<= ϵ]
+  old_unmatched_idxs = filter(i -> i ∉ old_matched_idxs, Array(1:nrow(records.last_iteration)))
+  unmatched_records = records.last_iteration.records_idxs[old_unmatched_idxs]
+
+  # update records
+  mw = minimum(new_iteration[nrows,:])
+  if dims == 2
+    new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :s, :w]) : DataFrame(x=[],y=[],s=[],w=[])
+  elseif dims == 3
+    new_iteration = length(new_iteration) > 0 ? DataFrame(new_iteration', [:x, :y, :z, :sxy, :sz, :w]) : DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[])
+  else
+    error("dims = $dims. Must be either 2 or 3.")
+  end
+  records.records[unmatched_records, "lowest_mw"] .= mw
+  
+  if length(matched_idxs) > 0
+    matched_dot_record_idxs = records.last_iteration.records_idxs[old_matched_idxs]
+  end
+  
+  new_dots = new_iteration[new_dot_idxs,:]
+  new_dots[!, "lowest_mw"] .= 0
+  new_dots[!, "highest_mw"] .= mw
+  records.records = vcat(records.records, new_dots)
+
+  #update last iteration
+  new_iteration[!, "records_idxs"] .= 0
+  if length(matched_idxs) > 0    
+    new_iteration[matched_idxs, "records_idxs"] .= matched_dot_record_idxs
+  end
+  new_iteration[new_dot_idxs, "records_idxs"] .= Array((nrow(records.records)-nrow(new_dots)+1):nrow(records.records))
+  records.last_iteration = new_iteration
+  records.last_iteration_tree = make_KDTree(model, records.last_iteration)
+
+  return records
 end

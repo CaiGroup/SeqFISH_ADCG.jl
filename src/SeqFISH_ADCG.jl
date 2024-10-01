@@ -3,6 +3,7 @@ module SeqFISH_ADCG
 include("abstractTypes.jl")
 include("lsLoss.jl")
 include("BoxConstrainedDifferentiableModel.jl")
+include("DotRecords.jl")
 include("ADCG.jl")
 include("gaussblur.jl")
 include("gaussblur3d.jl")

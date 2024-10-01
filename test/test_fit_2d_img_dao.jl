@@ -30,7 +30,8 @@ res_final, res_records = fit_2048x2048_img_tiles(test_img,
                            min_weight :: Float64,
                            max_iters :: Int64,
                            max_cd_iters :: Int64,
-                           noise_mean :: Float64
+                           noise_mean :: Float64,
+                           fit_alg= "DAO"
         )
 
 blank_res_final, blank_res_records = fit_2048x2048_img_tiles(
@@ -42,7 +43,8 @@ blank_res_final, blank_res_records = fit_2048x2048_img_tiles(
                                         min_weight :: Float64,
                                         max_iters :: Int64,
                                         max_cd_iters :: Int64,
-                                        noise_mean :: Float64
+                                        noise_mean :: Float64,
+                                        fit_alg="DAO"
 )
 println("blank_res_final: $blank_res_final")
 @test all(Array(isapprox.(Matrix(res_final), p_true', atol= 0.1)))

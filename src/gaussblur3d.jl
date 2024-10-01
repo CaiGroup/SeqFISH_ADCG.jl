@@ -9,6 +9,7 @@ struct GaussBlur3D <: GaussBlur
   psf_z_thresh :: Int64
   zgrid :: Matrix{Float64}
   gb2d :: GaussBlur2D
+  dims :: Int64
 end
 
 function GaussBlur3D(
@@ -22,7 +23,7 @@ function GaussBlur3D(
   gb2d = GaussBlur2D(sigma_xy_lb, sigma_xy_ub, n_pixels)
   psf_z_thresh = ceil(Int64, sigma_z_ub*3.0)
   zgrid = computeFs(Array(0.5:0.5:n_slices), n_slices, ones(2*n_slices).*sigma_z_lb, psf_z_thresh)
-  GaussBlur3D(sigma_z_lb, sigma_z_ub, n_pixels, n_slices, psf_z_thresh, zgrid, gb2d)
+  GaussBlur3D(sigma_z_lb, sigma_z_ub, n_pixels, n_slices, psf_z_thresh, zgrid, gb2d, 3)
 end
 
 
@@ -79,6 +80,74 @@ function getStartingPoint(model :: GaussBlur3D, r_vec :: Vector{Float64})
   return thetas
 end
 
+
+function getNextPoints(model :: GaussBlur3D, r_vec :: Vector{Float64}, min_weight)
+  r = reshape(r_vec, model.n_pixels, model.n_pixels, model.n_slices)
+  #ng = model.ng
+  z_slice_obj_values = zeros(model.n_pixels*2, model.n_pixels*2, model.n_slices)
+  for z = 1:(model.n_slices)
+    z_slice_obj_values[:,:,z] = model.gb2d.grid_f'*r[:,:,z]*model.gb2d.grid_f
+  end
+
+  grid_objective_values = zeros(model.n_pixels*2, model.n_pixels*2, 2*model.n_slices)
+  for y = 1:(2*model.n_pixels)# n_z_slices
+    grid_objective_values[y,:,:] = z_slice_obj_values[y,:,:]*model.zgrid
+  end
+
+  local_maxima_mask = local_maxima(grid_objective_values) #argmin(grid_objective_values)
+  next_pnt_coords = findall(local_maxima_mask .!= 0)
+  next_pnts= hcat(collect.(Tuple.(next_pnt_coords))...)
+  thetas = hcat(next_pnts[2, :], next_pnts[1, :])' .*(model.n_pixels/model.gb2d.ng)
+  #thetas =  [next_pnts[2], next_pnts[1]].*(model.n_pixels/model.gb2d.ng)
+  thetas = vcat(thetas, next_pnts[3, :]' ./ 2)
+  
+  ndots = length(next_pnt_coords)
+
+  thetas = vcat(thetas, fill(model.gb2d.sigma_lb, 1, ndots))
+  thetas = vcat(thetas, fill(model.sigma_z_lb, 1, ndots))
+  thetas = vcat(thetas, ones(1, ndots))
+
+  opt_w = 0
+  opt_s_xy = model.gb2d.sigma_lb
+  opt_s_z = model.sigma_z_lb
+  opt_obj = Inf
+  psfs = []
+  for i in 1:ndots
+    coords_sigma = reshape(thetas[:,i], 6,1) #reshape([thetas[1] thetas[2] model.sigma_lb 1.0],4,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    push!(psfs, A)
+  end
+  #=
+  for s_xy in range(model.gb2d.sigma_lb, model.gb2d.sigma_ub, length=20), s_z in range(model.sigma_z_lb, model.sigma_z_ub, length=10)
+    coords_sigma = reshape([thetas[1] thetas[2] thetas[3] s_xy s_z 1.0],6,1)
+    A = vec(phi(model, coords_sigma))
+    A = reshape(A, length(A), 1)
+    l_fit = lm(A, r_vec)
+    obj_v = sum(residuals(l_fit).^2)
+    if obj_v < opt_obj
+      opt_s_xy = s_xy
+      opt_s_z = s_z
+      opt_w = coef(l_fit)[1]
+      opt_obj = obj_v
+    end
+  end=#
+  X = hcat(psfs...)
+  l_fit = lm(X, r_vec)
+  thetas[6,:] .= coef(l_fit)
+  thetas = thetas[:, coef(l_fit) .> min_weight]
+
+  #=
+  if opt_w < 0
+    opt_w = 0
+  end
+  push!(thetas, opt_s_xy)
+  push!(thetas, opt_s_z)
+  push!(thetas, opt_w)
+  =#
+  return thetas
+end
+
 function phi(s :: GaussBlur3D, parameters :: Matrix{Float64})
   canvas = zeros(s.n_pixels, s.n_pixels, s.n_slices)
   for i in 1:size(parameters)[2]
@@ -128,17 +197,16 @@ function computeGradient(model :: GaussBlur3D, thetas :: Matrix{Float64}, r :: V
     for k = 1:model.n_slices
       fz = exp(-(k-x₃ₗ)^2/(2 * σzₗ^2))
 
-      ∂loss∂x₁ₗ = - wₗ * fz *(f_x2' * r[:,:,k] * fpx1)/(σₓₗ^2)
-      ∂loss∂x₂ₗ = - wₗ * fz * (fpx2' * r[:,:,k] * f_x1)/(σₓₗ^2)
-      ∂loss∂σₓₗ = - wₗ * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(σₓₗ^3)
-      ∂loss∂x₃ₗ = - wₗ * (k - x₃ₗ) * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^2)
-      ∂loss∂σzₗ = - wₗ * (k - x₃ₗ)^2 * fz* (f_x2' * r[:,:,k] * f_x1)/(σzₗ^3)
-      ∂loss∂wₗ = - fz* (f_x2' * r[:,:,k] * f_x1)
+      ∂loss∂x₁ₗ = - 2 * wₗ * fz *(f_x2' * r[:,:,k] * fpx1)/(σₓₗ^2)
+      ∂loss∂x₂ₗ = - 2 * wₗ * fz * (fpx2' * r[:,:,k] * f_x1)/(σₓₗ^2)
+      ∂loss∂σₓₗ = - 2* wₗ * fz * ( f_x2' * r[:,:,k] * fpx1s + fpx2s' * r[:,:,k] * f_x1)/(σₓₗ^3)
+      ∂loss∂x₃ₗ = - 2 * wₗ * (k - x₃ₗ) * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^2)
+      ∂loss∂σzₗ = - 2 * wₗ * (k - x₃ₗ)^2 * fz * (f_x2' * r[:,:,k] * f_x1)/(σzₗ^3)
+      ∂loss∂wₗ = - 2 * fz* (f_x2' * r[:,:,k] * f_x1)
 
       k_sums .+= [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂x₃ₗ, ∂loss∂σₓₗ, ∂loss∂σzₗ, ∂loss∂wₗ]
     end
-    #gradient[:, l] = [∂loss∂x₁ₗ, ∂loss∂x₂ₗ, ∂loss∂σₗ]
-    gradient[:, l] = k_sums ./ model.n_slices
+    gradient[:, l] = k_sums
   end
   return gradient
 end
@@ -147,26 +215,41 @@ end
 function localDescent_coord(s :: GaussBlur3D, lossFn :: Loss, thetas ::Matrix{Float64}, w :: Vector{Float64}, y :: Vector{Float64})
   lb,ub = parameterBounds(s)
   nPoints = size(thetas,2)
-  im_lb = fill(lb[1], nPoints)
-  im_ub = fill(ub[2], nPoints)
-  x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[1,:] .- s.gb2d.psf_thresh)
-  x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[2,:] .- s.gb2d.psf_thresh)
-  x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb, thetas[3,:] .- s.psf_z_thresh)
-  x1_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[1,:] .+ s.gb2d.psf_thresh)
-  x2_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[2,:] .+ s.gb2d.psf_thresh)
-  x3_ub = broadcast((a, b) -> a < b ? a : b, im_ub, thetas[3,:] .+ s.psf_z_thresh)
+  im_lb_1 = fill(lb[1], nPoints)
+  im_lb_2 = fill(lb[2], nPoints)
+  im_lb_3 = fill(lb[3], nPoints)
+  im_ub_1 = fill(ub[1], nPoints)
+  im_ub_2 = fill(ub[2], nPoints)
+  im_ub_3 = fill(ub[3], nPoints)
+
+  thetas[1,:]
+
+  x1_lb = broadcast((a, b) -> a > b ? a : b, im_lb_1, thetas[1,:] .- s.gb2d.psf_thresh)
+  x2_lb = broadcast((a, b) -> a > b ? a : b, im_lb_2, thetas[2,:] .- s.gb2d.psf_thresh)
+  x3_lb = broadcast((a, b) -> a > b ? a : b, im_lb_3, thetas[3,:] .- s.psf_z_thresh)
+  x1_ub = broadcast((a, b) -> a < b ? a : b, im_ub_1, thetas[1,:] .+ s.gb2d.psf_thresh)
+  x2_ub = broadcast((a, b) -> a < b ? a : b, im_ub_2, thetas[2,:] .+ s.gb2d.psf_thresh)
+  x3_ub = broadcast((a, b) -> a < b ? a : b, im_ub_3, thetas[3,:] .+ s.psf_z_thresh)
 
   lb = vec(vcat(x1_lb', x2_lb', x3_lb'))
   ub = vec(vcat(x1_ub', x2_ub', x3_ub'))
+
+  thetas_copy = copy(thetas)
 
   p = size(thetas,1)
   su = SupportUpdateProblem(nPoints,p,s,y,w,lossFn)
   function f_and_g!(x,g)
       ps = reshape(x, 3, Int64(length(x)/3))
-      output = phi(su.s,ps)
+      thetas_copy[1:3, :] .= ps
+      #output = phi(su.s,ps)
+      output = phi(su.s,thetas_copy)
       residual = su.y .- output
-      l,v_star = loss(s.lossFn,residual)
-      g[:] = computeGradient(su.s, ps, residual)[1:3]
+      residual = su.y .- output
+      #l,v_star = loss(s.lossFn,residual)
+      #g[:] = computeGradient(su.s, ps, residual)[1:3]
+      l,v_star = loss(su.lossFn,residual)
+      g[:] = vec(computeGradient(su.s, thetas_copy, residual)[1:3, :])
+      return l
   end
   opt = Opt(NLopt.LD_MMA, 3*nPoints)
   initializeOptimizer!(s, opt)
@@ -254,4 +337,25 @@ function lmo(model :: GaussBlur3D, r :: Vector{Float64})
     error("Forced Stop in Coordinate Optimization")
   end
   return (optx, optf)
+end
+
+make_KDTree(model :: GaussBlur3D, pnts :: DataFrame) = KDTree(Array([pnts.x pnts.y pnts.z]'))
+
+
+function initialize_dot_records(model :: GaussBlur3D, initial_ps :: Matrix)
+  initial_ps 
+  if length(initial_ps) > 0
+    tree = KDTree(initial_ps[1:2,:])
+    initial_ps_df = DataFrame(initial_ps', [:x, :y, :z, :sxy, :sz, :w])
+    records = copy(initial_ps_df)
+    records.highest_mw = [initial_ps_df.w]
+    records.lowest_mw = [initial_ps_df.w]
+    last_iter = copy(initial_ps_df)
+    last_iter.records_idxs = [1]
+  else 
+    records = DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[],highest_mw=[],lowest_mw=[])
+    last_iter = DataFrame(x=[],y=[],z=[],sxy=[],sz=[],w=[],records_idxs=[])
+    tree = KDTree([Inf; Inf; Inf])
+  end  
+  return DotRecords(records, last_iter, tree)
 end

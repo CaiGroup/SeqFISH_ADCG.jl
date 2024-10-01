@@ -1,28 +1,43 @@
-export ADCG
+export run_fit
 
-function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: Float64, min_weight :: Float64;
+function run_fit(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: Float64, min_weight :: Float64;
+  match_ϵ :: Float64 = 0.1,
   callback :: Function = (old_thetas,thetas,output,old_obj_val) -> false,
   max_iters :: Int64 = 50,
-  max_cd_iters :: Int64 = 200)
+  max_cd_iters :: Int64 = 200,
+  fit_alg = "ADCG")
 
 
   @assert tau > 0.0
   bound = -Inf
   thetas = zeros(0,0)
+
   #weights = zeros(0)
   #cache the forward model applied to the current measure.
   output = zeros(length(y))
+  dot_record = initialize_dot_records(sim, thetas)
   for iter = 1:max_iters
     #compute the current residual
     residual = y .- output
     #evalute the objective value and gradient of the loss
     objective_value, grad = loss(lossFn, residual)
     #compute the next parameter value to add to the support
-    theta,score = lmo(sim,residual)#grad)
-    #score is - |<\psi(theta), gradient>|
-    #update the lower bound on the optimal value
-    bound = max(bound, objective_value+score*tau-dot(output,grad))
-    #check if the bound is met.
+    if fit_alg == "ADCG"
+      new_theta,score = lmo(sim,residual)#grad)
+      #score is - |<\psi(theta), gradient>|
+      #update the lower bound on the optimal value
+      bound = max(bound, objective_value+score*tau-dot(output,grad))
+      #check if the bound is met.
+
+      old_thetas = thetas
+      thetas = iter == 1 ? reshape(new_theta, length(new_theta),1) : [thetas new_theta]
+    elseif fit_alg == "DAO"
+      new_theta = getNextPoints(sim, residual, min_weight)
+      old_thetas = thetas
+      thetas = iter == 1 ? new_theta : [thetas new_theta]
+    else
+      error("$fit_alg not a supported fit algorithm. Supported fit algorithms are 'ADCG' and 'DAO'")
+    end
 
     #if(objective_value < bound + min_optimality_gap || score >= 0.0)
       #println("bound: ", bound)
@@ -32,18 +47,20 @@ function ADCG(sim :: ForwardModel, lossFn :: Loss, y :: Vector{Float64}, tau :: 
       #return thetas,weights
     #end
     #update the support
-    old_thetas = thetas
-    thetas = iter == 1 ? reshape(theta, length(theta),1) : [thetas theta]
+    
     #run local optimization over the support.
     #old_weights = copy(weights)
     thetas = localUpdate(sim,lossFn,thetas,y,tau,max_cd_iters, min_weight)
     output = phi(sim, thetas)
     if callback(old_thetas, thetas, output, objective_value)
-      return old_thetas
+      return dot_record
+      #return old_thetas
     end
+    update_records!(sim, dot_record, thetas, match_ϵ, sim.dims)
   end
   println("Hit max iters in frank-wolfe!")
-  return thetas
+  return dot_record
+  #return thetas
 end
 
 function localUpdate(sim :: ForwardModel,lossFn :: Loss,
