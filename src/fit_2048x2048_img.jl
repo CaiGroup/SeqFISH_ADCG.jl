@@ -291,7 +291,11 @@ function _remove_duplicates(ps :: Matrix,
 
     grp_brightest_inds = []
     for grp in grps
-        push!(grp_brightest_inds, grp[argmax(ps[4,grp])])
+        if dims == 2
+            push!(grp_brightest_inds, grp[argmax(ps[4,grp])])
+        elseif dims == 3
+            push!(grp_brightest_inds, grp[argmax(ps[6,grp])])
+        end
     end
     sort!(grp_brightest_inds)
     bright_dup_ps = ps[:, grp_brightest_inds]

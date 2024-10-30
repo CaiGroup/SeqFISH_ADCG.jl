@@ -1,4 +1,4 @@
-export fit_stack_tiles, fit_stack, remove_duplicates3d
+export fit_stack_tiles, fit_stack, remove_duplicates3d, remove_duplicates_ignore_z
 
 using DataFrames
 
@@ -181,5 +181,36 @@ function remove_duplicates3d(points :: DataFrame,
     points_df[!, "sxy"] = ps[4,:]
     points_df[!, "sz"] = ps[5,:]
     points_df[!, "w"] = ps[6,:]
+    return points_df
+end
+
+function remove_duplicates_ignore_z(points :: DataFrame,
+    sigma_lb :: Float64,
+    sigma_ub :: Float64,
+    min_allowed_separation :: Float64
+    )
+
+    if nrow(points) == 0
+        return points
+    end
+    
+    ps = Array(hcat(points[!, "x"],
+                   points[!, "y"],
+                   points[!, "sxy"],
+                   points[!, "w"])')
+
+    while true
+        ps_new = _remove_duplicates(ps, zeros(2,2), sigma_lb, sigma_ub, 1.0, 0.0, min_allowed_separation, 2)
+        if prod(size(ps)) == prod(size(ps_new))
+            ps = ps_new
+            break
+        else
+            ps = ps_new
+        end
+    end
+
+    new_points = DataFrame(ps', ["x","y","sxy","w"])
+    points_df = innerjoin(points, new_points,on=["x","y","sxy","w"])
+
     return points_df
 end

@@ -20,4 +20,5 @@ end
     include("test_fit_3d_tile.jl")
     include("test_find_starting_point_3d_dao.jl")
     include("test_fit_3d_tile_dao.jl")
+    include("test_3d_remove_duplicates.jl")
 end
