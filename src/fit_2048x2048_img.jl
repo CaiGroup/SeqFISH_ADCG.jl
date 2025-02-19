@@ -136,7 +136,8 @@ end
                   min_weight :: Float64,
                   max_iters :: Int64,
                   max_cd_iters :: Int64,
-                    noise_mean :: Float64
+                  noise_mean :: Float64, 
+                  fit_alg :: AbstractString = "ADCG"
                 )
 Run ADCG on a square image of arbitrar sized pixel image by breaking it up into overlapping tiles of user specified
 width and overlap, then running ADCG on each tile and aggregating the results
@@ -153,6 +154,7 @@ Arguments:
 - `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `noise_mean` : the noise mean is subtracted from the image before fitting
+- `fit_alg` : 
 
 Fits gaussian point spread functions in an arbitrarily sizedsquare image with ADCG by splitting it into overlapping pixel tiles of user specified size. 
 

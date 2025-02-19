@@ -2,6 +2,21 @@ export fit_stack_tiles, fit_stack, remove_duplicates3d, remove_duplicates_ignore
 
 using DataFrames
 
+"""
+    fit_tile(inputs)
+
+Arguments:
+- `inputs` : A tuple of inputs with entries:
+    - `tile` : An image tile to perform ADCG on.
+    - `sigma_lb` : the lowest allowed value of the width parameter of dots.
+    - `sigma_ub` : the highest allowed value of the width parameter of dots.
+    - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
+    - `tau` : not used in this version
+    - `final_loss_improvement` : Terminate ADCG when the objective improves by less than this value in one iteration
+    - `min_weight` : The minimum allowed weight of a PSF in the image model
+    - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
+    - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
+"""
 function fit_stack(inputs)
     #println("fitting tile ... ")
     (stack, sigma_xy_lb, sigma_xy_ub, sigma_z_lb, sigma_z_ub, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg) = inputs
@@ -45,7 +60,44 @@ function fit_stack(inputs)
     return records
 end
 
+"""
+    fit_stack_tiles(
+                       img_stack,
+                       main_tile_width :: Int64,
+                       tile_overlap :: Int64,
+                       tile_depth :: Int64,
+                       tile_depth_overhang :: Int64,
+                       sigma_xy_lb :: Float64,
+                       sigma_xy_ub :: Float64,
+                       sigma_z_lb :: Float64,
+                       sigma_z_ub :: Float64,
+                       final_loss_improvement :: Float64,
+                       min_weight :: Float64,
+                       max_iters :: Int64,
+                       max_cd_iters :: Int64,
+                       fit_alg = "ADCG"
+                )
+Run ADCG on a square image of arbitrar sized pixel image by breaking it up into overlapping tiles of user specified
+width and overlap, then running ADCG on each tile and aggregating the results
+It is necessary to call remove duplicates on the resultant image to remove the duplicates in the regions of overlapping tiles.
 
+Arguments:
+- `img` : a 2048x2048 image to fit
+- `main_tile_width` : the width of the main tile 
+- `tile_overlap` : width of the overlaps of tiles with their neighbors 
+- `sigma_xy_lb` : the lowest allowed lateral σ of a PSF
+- `sigma_xy_ub` : the highest allowed lateral σ of a PSF
+- `sigma_z_lb` : the lowest allowed axial σ of a PSF
+- `sigma_z_ub` : the highest allowed axial σ of a PSF
+- `final_loss_improvement` : ADCG terminates when the improvement in the loss function in subsequent iterations is less than this
+- `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
+- `max_iters` : the maximum number of iterations in which a new PSF may be added to the model of a tile (i.e. the maximum PSFs in a tile)
+- `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
+- `noise_mean` : the noise mean is subtracted from the image before fitting
+
+Fits gaussian point spread functions in an arbitrarily sizedsquare image with ADCG by splitting it into overlapping pixel tiles of user specified size. 
+
+"""
 function fit_stack_tiles(img_stack,
                        main_tile_width :: Int64,
                        tile_overlap :: Int64,
@@ -148,6 +200,17 @@ function tiles_to_img_stack(trimmed_tile_fits, coords)
     #points_df[!, "w"] = ps[6,:]
 end
 
+"""
+    remove_duplicates3d(points :: DataFrame,
+                    img,
+                    sigma_lb :: Float64,
+                    sigma_ub :: Float64,
+                    min_allowed_separation :: Float64,
+                    )
+
+    Removes duplicates within min_allowed_separtion (voxels) of each other from an image.
+    This is necessary when fit by a tiled ADCG where the tiles overlap.
+"""
 function remove_duplicates3d(points :: DataFrame,
                            sigma_lb :: Float64,
                            sigma_ub :: Float64,
@@ -184,6 +247,21 @@ function remove_duplicates3d(points :: DataFrame,
     return points_df
 end
 
+"""
+    remove_duplicates_ignore_z(points :: DataFrame,
+                    img,
+                    sigma_lb :: Float64,
+                    sigma_ub :: Float64,
+                    tau :: Float64,
+                    noise_mean :: Float64,
+                    min_allowed_separation :: Float64,
+                    dims :: Int64 = 2
+                    )
+
+    Removes duplicates within min_allowed_separtion of each other from an image in the xy directions.
+    In cases where z fitting is unreliable, it may be best to ingore the z coordinate for determining duplicates.
+    This is necessary when fit by a tiled ADCG where the tiles overlap.
+"""
 function remove_duplicates_ignore_z(points :: DataFrame,
     sigma_lb :: Float64,
     sigma_ub :: Float64,

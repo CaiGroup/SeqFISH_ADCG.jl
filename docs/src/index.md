@@ -6,7 +6,7 @@ SeqFISH_ADCG (Sequential Fluoresceint Insitue Hybridization Alternating Descent 
 
 ADCG does this by taking an alternating approach to fitting: add a single molecule to the model, then adjust the entire, repeat.
 
-Here we extend ADCG to apply it specifically to SeqFISH Data. 
+Here, we extend ADCG to apply it specifically to SeqFISH Data. 
 
 Generally, this package can be used to fit images that are composed of a superposition of Gaussian point spread functions. The fit procedure is iterative. At each iteration, a new point spread function is added to the model of the image, and the parameters (position and width) of the point spread functions previously in the model are adjusted to accomodate the newcomer.
 
