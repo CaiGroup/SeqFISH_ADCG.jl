@@ -21,6 +21,7 @@ Arguments:
     - `min_weight` : The minimum allowed weight of a PSF in the image model
     - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
     - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
+    - `fit_alg` : The fit algorithm to use "ADCG" or "DAO". Only ADCG is fully tested.
 """
 function fit_tile(inputs)
     tile, sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg = inputs
