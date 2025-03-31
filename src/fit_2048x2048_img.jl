@@ -21,6 +21,7 @@ Arguments:
     - `min_weight` : The minimum allowed weight of a PSF in the image model
     - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
     - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
+    - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested.
 """
 function fit_tile(inputs)
     tile, sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg = inputs
@@ -88,7 +89,8 @@ end
                             min_weight :: Float64,
                             max_iters :: Int64,
                             max_cd_iters :: Int64,
-                            noise_mean :: Float64
+                            noise_mean :: Float64,
+                            fit_alg :: AbstractString = "ADCG"
                             )
 
 Arguments:
@@ -100,6 +102,7 @@ Arguments:
 - `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `noise_mean` : the noise mean is subtracted from the image before fitting
+- `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
 
 Fits gaussian point spread functions in a 2048x2048 pixel image with ADCG by splitting it into overlapping 70x70 pixel tiles. 
 
@@ -153,6 +156,7 @@ Arguments:
 - `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `noise_mean` : the noise mean is subtracted from the image before fitting
+- `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
 
 Fits gaussian point spread functions in an arbitrarily sizedsquare image with ADCG by splitting it into overlapping pixel tiles of user specified size. 
 
