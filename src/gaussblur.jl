@@ -156,6 +156,7 @@ computeGradient(model :: GaussBlur2D, thetas :: Matrix{Float64}, v :: Vector{Flo
 
 
 """
+
 function computeGradient(model :: GaussBlur2D, thetas :: Matrix{Float64}, r :: Vector{Float64})
 
   # v is the gradient of loss (vi = resid_i/norm(residuals))
