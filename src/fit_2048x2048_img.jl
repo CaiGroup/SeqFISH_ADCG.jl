@@ -22,6 +22,11 @@ Arguments:
     - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
     - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
     - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested.
+
+Returns:
+- records object of points obtained at intermediate steps in the fitting process
+
+Runs ADCG on a single 2D tile.
 """
 function fit_tile(inputs)
     tile, sigma_lb, sigma_ub, noise_mean, tau, final_loss_improvement, min_weight, max_iters, max_cd_iters, fit_alg = inputs
@@ -105,6 +110,10 @@ Arguments:
 - `noise_mean` : the noise mean is subtracted from the image before fitting
 - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
 
+Returns:
+- DataFrame of points included in model at the end of the ADCG run
+- records object of points obtained at intermediate steps in the fitting process
+
 Fits gaussian point spread functions in a 2048x2048 pixel image with ADCG by splitting it into overlapping 70x70 pixel tiles. 
 
 """
@@ -160,6 +169,10 @@ Arguments:
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `noise_mean` : the noise mean is subtracted from the image before fitting
 - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
+
+Returns:
+- DataFrame of points included in model at the end of the ADCG run
+- records object of points obtained at intermediate steps in the fitting process
 
 Fits gaussian point spread functions in an arbitrarily sizedsquare image with ADCG by splitting it into overlapping pixel tiles of user specified size. 
 
@@ -236,7 +249,19 @@ end
                     dims :: Int64 = 2
                     )
 
-    Removes duplicates within min_allowed_separtion of each other from an image.
+    Arguments:
+    - `img` : a 2048x2048 image to fit
+    - `sigma_lb` : the lowest allowed σ of a PSF
+    - `sigma_ub` : the highest allowed σ of a PSF
+    - `tau` : not used in current version
+    - `noise_mean` : the noise mean is subtracted from the image before fitting
+    - `min_allowed_separation` : Dots within this distance of each other are considered duplicates
+    - `dims` : The dimension of the data
+
+    Returns:
+    - DataFrame of points without duplicates.
+
+    Thins duplicates within min_allowed_separtion of each other from an image. Keeping only best dots such that all dots returned are at least min_allowed_separation from their nearest neighbor.
     This is necessary when fit by a tiled ADCG where the tiles overlap.
 """
 function remove_duplicates(points :: DataFrame,

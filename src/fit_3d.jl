@@ -17,6 +17,12 @@ Arguments:
     - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
     - `max_cd_iterations` : the maximum number of times to perform gradient descent for the parameter values of all dots.
     - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
+
+Returns:
+- records object of points obtained at intermediate steps in the fitting process
+
+Runs ADCG on a single 3D stack.
+
 """
 function fit_stack(inputs)
     #println("fitting tile ... ")
@@ -78,7 +84,7 @@ end
                        max_cd_iters :: Int64,
                        fit_alg = "ADCG"
                 )
-Run ADCG on a square image of arbitrar sized pixel image by breaking it up into overlapping tiles of user specified
+Run ADCG on a square image of arbitrary sized pixel image by breaking it up into overlapping tiles of user specified
 width and overlap, then running ADCG on each tile and aggregating the results
 It is necessary to call remove duplicates on the resultant image to remove the duplicates in the regions of overlapping tiles.
 
@@ -97,6 +103,12 @@ Arguments:
 - `max_iters` : the maximum number of iterations in which a new PSF may be added to the model of a tile (i.e. the maximum PSFs in a tile)
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
+
+Returns:
+- DataFrame of points included in model at the end of the ADCG run
+- records object of points obtained at intermediate steps in the fitting process
+
+Fits gaussian point spread functions in an arbitrarily sizedsquare image with ADCG by splitting it into overlapping pixel tiles of user specified size. 
 """
 function fit_stack_tiles(img_stack,
                        main_tile_width :: Int64,
