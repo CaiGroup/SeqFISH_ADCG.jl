@@ -7,11 +7,11 @@ using DataFrames
 
 Arguments:
 - `inputs` : A tuple of inputs with entries:
-    - `tile` : An image stack to perform ADCG on.
-    - `sigma_lb` : the lowest allowed value of the width parameter of dots.
-    - `sigma_ub` : the highest allowed value of the width parameter of dots.
-    - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
-    - `tau` : not used in this version
+    - `stack` : An image stack to perform ADCG on.
+    - `sigma_xy_lb` : the lowest allowed value of the width parameter of dots in the xy plane.
+    - `sigma_xy_ub` : the highest allowed value of the width parameter of dots  in the xy plane.
+    - `sigma_z_lb` : the lowest allowed value of the width parameter of dots in the z axis.
+    - `sigma_z_ub` : the hightest allowed value of the width parameter of dots in the z axis.
     - `final_loss_improvement` : Terminate ADCG when the objective improves by less than this value in one iteration
     - `min_weight` : The minimum allowed weight of a PSF in the image model
     - `max_iters` : The maximum number of ADCG iterations, or number PSFs to add to the model.
@@ -85,7 +85,9 @@ It is necessary to call remove duplicates on the resultant image to remove the d
 Arguments:
 - `img` : a 2048x2048 image to fit
 - `main_tile_width` : the width of the main tile 
-- `tile_overlap` : width of the overlaps of tiles with their neighbors 
+- `tile_overlap` : width of the overlaps of tiles with their neighbors
+- `tile_depth` : the z depth of main tiles`
+- `tile_depth_overhang` : the overlap/overhang of tiles in the z axis
 - `sigma_xy_lb` : the lowest allowed lateral σ of a PSF
 - `sigma_xy_ub` : the highest allowed lateral σ of a PSF
 - `sigma_z_lb` : the lowest allowed axial σ of a PSF
@@ -94,7 +96,6 @@ Arguments:
 - `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
 - `max_iters` : the maximum number of iterations in which a new PSF may be added to the model of a tile (i.e. the maximum PSFs in a tile)
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
-- `noise_mean` : the noise mean is subtracted from the image before fitting
 - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
 """
 function fit_stack_tiles(img_stack,
