@@ -3,11 +3,11 @@ export fit_stack_tiles, fit_stack, remove_duplicates3d
 using DataFrames
 
 """
-    fit_tile(inputs)
+    fit_stack(inputs)
 
 Arguments:
 - `inputs` : A tuple of inputs with entries:
-    - `tile` : An image tile to perform ADCG on.
+    - `tile` : An image stack to perform ADCG on.
     - `sigma_lb` : the lowest allowed value of the width parameter of dots.
     - `sigma_ub` : the highest allowed value of the width parameter of dots.
     - `noise_mean` : estimated mean of noise. Pixel values below this are set to zero.
