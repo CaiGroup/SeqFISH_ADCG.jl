@@ -100,6 +100,7 @@ Arguments:
 - `tau` : not used in current version
 - `final_loss_improvement` : ADCG terminates when the improvement in the loss function in subsequent iterations is less than this
 - `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
+- `max_iters` : The maximum number of points to add in a model of a tile
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `noise_mean` : the noise mean is subtracted from the image before fitting
 - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
@@ -155,6 +156,7 @@ Arguments:
 - `tau` : not used in current version
 - `final_loss_improvement` : ADCG terminates when the improvement in the loss function in subsequent iterations is less than this
 - `min_weight` : ADCG terminates when the next best PSF to add to the model has weight less than this
+- `max_iters` : The maximum number of points to add in a model of a tile
 - `max_cd_iters` : the maximum number of iterations of gradient descent to run after adding a PSF to the model to adjust the parameters of all PSFs in the model
 - `noise_mean` : the noise mean is subtracted from the image before fitting
 - `fit_alg` : 'ADCG' or 'DAO', uses the respective algorithm. Only ADCG is thorougly tested. Must be set as a keyword argument.
