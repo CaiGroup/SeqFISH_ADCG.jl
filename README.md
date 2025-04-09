@@ -4,4 +4,6 @@ A [copy](paper.pdf) of the paper is included in this repository.
 
 Install with `Pkg.add("https://github.com/CaiLab/SeqFISH_ADCG")`.
 
+An example notebook is available for use with [google colab](https://colab.research.google.com/github/CaiGroup/SeqFISH_ADCG.jl/blob/master/example_notebooks/colab/example_FitDots.jl.ipynb).
+
 Modified by Jonathan A White 2025
