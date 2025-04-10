@@ -1,5 +1,7 @@
 # Example Fitting with ADCG
 
+*note: this example is generated from a jupyter notebook. Both a [local](https://github.com/CaiGroup/SeqFISH_ADCG.jl/tree/master/example_notebooks) and a [google colab](https://colab.research.google.com/github/CaiGroup/SeqFISH_ADCG.jl/blob/master/example_notebooks/colab/example_FitDots.jl.ipynb) version are available.*
+
 This example uses images from the 561 channel in position 4 of replicate 2, to be consistent with the companion packages.
 
 
