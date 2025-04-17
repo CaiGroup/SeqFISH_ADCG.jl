@@ -210,6 +210,25 @@ function tiles_to_img_stack(trimmed_tile_fits, coords)
     #points_df[!, "w"] = ps[6,:]
 end
 
+"""
+    remove_duplicates3d(points :: DataFrame,
+                    sigma_lb :: Float64,
+                    sigma_ub :: Float64,
+                    min_allowed_separation :: Float64,
+                    )
+
+# Arguments:
+- `points` : A dataframe of points found from fit_stack_tiles
+- `sigma_lb` : the lowest allowed σ of a PSF
+- `sigma_ub` : the highest allowed σ of a PSF
+- `min_allowed_separation` : Dots within this distance of each other are considered duplicates
+
+# Returns:
+- DataFrame of points without duplicates.
+
+Thins duplicates within `min_allowed_separtion` of each other from an image. Keeping only best dots such that all dots returned are at least `min_allowed_separation` from their nearest neighbor.
+This is necessary when fit by a tiled ADCG where the tiles overlap.
+"""
 function remove_duplicates3d(points :: DataFrame,
                            sigma_lb :: Float64,
                            sigma_ub :: Float64,

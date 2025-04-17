@@ -249,6 +249,7 @@ end
                     )
 
 # Arguments:
+- `points` : A dataframe of points found from fit_img_tiles or fit_2048x2048_img_tiles
 - `img` : a 2048x2048 image to fit
 - `sigma_lb` : the lowest allowed σ of a PSF
 - `sigma_ub` : the highest allowed σ of a PSF
